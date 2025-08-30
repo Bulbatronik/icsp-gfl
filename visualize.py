@@ -10,6 +10,9 @@ import random
 import warnings
 warnings.filterwarnings('ignore')
 
+# Increase the quality
+plt.rcParams['figure.dpi'] = 150
+
 # Set random seeds for reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
