@@ -1,0 +1,29 @@
+# Default configuration for decentralized federated learning simulation
+epochs: 5
+rounds: 50
+rounds_patience: 5
+lr: 0.01
+optimizer: sgd  # Options: sgd, adam
+batch_size: 64
+rho: 0.8 # mixing parameter for model update
+
+dataset:
+  name: mnist  # Options: mnist, cifar10
+  distribution: iid  # Options: iid, non-iid
+
+# Topology
+netwotk:
+  num_clients: 10
+  topology: random # Options: TODO
+  selection_method: random
+
+selction_ratio: 0.5 # Ratio of neighbors selected (== 1 for broadcast)
+dist: eucl # Options: eucl, cos 
+
+
+# Hydra configuration for the project. DO NOT TOUCH!
+hydra:
+  run:
+    dir: .        
+  job:
+    chdir: false   

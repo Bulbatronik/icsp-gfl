@@ -13,10 +13,11 @@ class NetworkTopology:
         Grid - 2D lattice structure for geographic scenarios
     """
     
-    def __init__(self, num_clients: int = 5):
+    def __init__(self, num_clients: int = 5, edge_probability: float = 0.3):
         self.num_clients = min(num_clients, 10)  # Limit to 10 clients
         self.clients = list(range(self.num_clients))
-    
+        self.edge_probability = edge_probability
+        
     def _relabel_nodes(self, G: nx.Graph) -> nx.Graph:
         """Relabel nodes to be sequential integers"""
         mapping = {node: i for i, node in enumerate(G.nodes())}
@@ -41,9 +42,9 @@ class NetworkTopology:
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_random_topology(self, edge_probability: float = 0.3) -> nx.Graph:
+    def create_random_topology(self) -> nx.Graph:
         """Create a random topology with given edge probability"""
-        G = nx.erdos_renyi_graph(self.num_clients, edge_probability)
+        G = nx.erdos_renyi_graph(self.num_clients, self.edge_probability)
         # Ensure connectivity
         if not nx.is_connected(G):
             # Add edges to make it connected

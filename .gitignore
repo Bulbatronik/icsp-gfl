@@ -1,4 +1,7 @@
 .venv/
+.hydra/
 data/
 
 __pycache__/
+
+*.log
