@@ -38,18 +38,19 @@ def main(cfg: DictConfig):
     print("Configuration:\n", OmegaConf.to_yaml(cfg))
     
     # Initialize Weights & Biases for experiment tracking
-    run = wandb.init(
-        project="decentralized-federated-learning",
-        config=OmegaConf.to_container(cfg)
-    )
+    #run = wandb.init(
+    #    project="decentralized-federated-learning",
+    #    config=OmegaConf.to_container(cfg)
+    #)
     
     # Set the topology
-    network = NetworkTopology(
-        num_clients=cfg.num_clients, 
-        #topology_type=cfg.topology
-    )
-    G = network.create_topology()
-
+    network = NetworkTopology(**cfg['network'])
+    network.create_topology()
+    info = network.get_topology_info()
+    print("Topology info:\n", OmegaConf.to_yaml(info))
+    
+    
+    
 if __name__ == "__main__":
     
     main()

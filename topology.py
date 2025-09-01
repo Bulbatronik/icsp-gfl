@@ -13,38 +13,64 @@ class NetworkTopology:
         Grid - 2D lattice structure for geographic scenarios
     """
     
-    def __init__(self, num_clients: int = 5, edge_probability: float = 0.3):
-        self.num_clients = min(num_clients, 10)  # Limit to 10 clients
+    def __init__(self, num_clients: int = 5, topology: str = "random", edge_proba: float = 0.3,
+                 k: int = 4, p: float = 0.3):
+        self.num_clients = num_clients # min(num_clients, 10)  # Limit to 10 clients
         self.clients = list(range(self.num_clients))
-        self.edge_probability = edge_probability
-        
+        self.edge_proba = edge_proba
+        self.k = k # Each node is connected to k nearest neighbors in the ring topology.
+        self.p = p # Probability of rewiring each edge.
+        self.topology = topology
+        self.G = None
+    
+    def create_topology(self) -> nx.Graph:
+        """Create the specified topology"""
+        if self.topology == "ring":
+            self.G = self._create_ring_topology()
+        elif self.topology == "fullycon":
+            self.G = self._create_fully_connected_topology()
+        elif self.topology == "star":
+            self.G = self._create_star_topology()
+        elif self.topology == "random":
+            self.G = self._create_random_topology()
+        elif self.topology == "smallwrld":
+            self.G = self._create_small_world_topology()
+        elif self.topology == "grid":
+            self.G = self._create_grid_topology()
+        elif self.topology == "women":
+            self.G = self._women_social_network()
+        elif self.topology == "karate":
+            self.G = self._karate_graph()
+        elif self.topology == "florentine":
+            self.G = self._florentine_families()
+
     def _relabel_nodes(self, G: nx.Graph) -> nx.Graph:
         """Relabel nodes to be sequential integers"""
         mapping = {node: i for i, node in enumerate(G.nodes())}
         G = nx.relabel_nodes(G, mapping)
         return G
     
-    def create_ring_topology(self) -> nx.Graph:
+    def _create_ring_topology(self) -> nx.Graph:
         """Create a ring topology where each client connects to its neighbors"""
         G = nx.cycle_graph(self.num_clients)
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_fully_connected_topology(self) -> nx.Graph:
+    def _create_fully_connected_topology(self) -> nx.Graph:
         """Create a fully connected topology where every client connects to every other"""
         G = nx.complete_graph(self.num_clients)
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_star_topology(self) -> nx.Graph:
+    def _create_star_topology(self) -> nx.Graph:
         """Create a star topology with one central client connected to all others"""
         G = nx.star_graph(self.num_clients - 1)
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_random_topology(self) -> nx.Graph:
+    def _create_random_topology(self) -> nx.Graph:
         """Create a random topology with given edge probability"""
-        G = nx.erdos_renyi_graph(self.num_clients, self.edge_probability)
+        G = nx.erdos_renyi_graph(self.num_clients, self.edge_proba)
         # Ensure connectivity
         if not nx.is_connected(G):
             # Add edges to make it connected
@@ -57,29 +83,20 @@ class NetworkTopology:
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_small_world_topology(self, k: int = 4, p: float = 0.3) -> nx.Graph:
-        """
-        Create a small-world topology using the Watts-Strogatz model.
-
-        Parameters:
-            k (int): Each node is connected to k nearest neighbors in the ring topology.
-            p (float): Probability of rewiring each edge.
-
-        Returns:
-            nx.Graph: A small-world network graph.
-        """
+    def _create_small_world_topology(self) -> nx.Graph:
+        """Create a small-world topology using the Watts-Strogatz model."""
         # Ensure k is even and less than num_clients
-        k = min(k, self.num_clients - 1)
+        k = min(self.k, self.num_clients - 1)
         if k % 2 == 1:
             k -= 1
         if k < 2:
             k = 2
             
-        G = nx.watts_strogatz_graph(self.num_clients, k, p)
+        G = nx.watts_strogatz_graph(self.num_clients, k, self.p)
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
         return G
     
-    def create_grid_topology(self) -> nx.Graph:
+    def _create_grid_topology(self) -> nx.Graph:
         """Create a 2D grid topology (works best with square numbers of clients)"""
         # Find closest square grid
         grid_size = int(np.sqrt(self.num_clients))
@@ -87,49 +104,47 @@ class NetworkTopology:
             grid_size += 1
         
         G = nx.grid_2d_graph(grid_size, grid_size)
-        
         # Remove extra nodes if needed
         nodes_to_remove = []
         for i, node in enumerate(G.nodes()):
             if i >= self.num_clients:
                 nodes_to_remove.append(node)
         G.remove_nodes_from(nodes_to_remove)
-        
         G = self._relabel_nodes(G)
-        
         nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(G.number_of_nodes())}, 'name')
         return G
     
-    def women_social_network(self) -> nx.Graph:
+    def _women_social_network(self) -> nx.Graph:
         """Davis Southern women social network"""
         G = nx.davis_southern_women_graph()
         G = self._relabel_nodes(G)
         return G
     
-    def karate_graph(self) -> nx.Graph:
+    def _karate_graph(self) -> nx.Graph:
         """Zachary’s Karate Club graph"""
         G = nx.karate_club_graph()
         G = self._relabel_nodes(G)
         return G
     
-    def florentine_families(self) -> nx.Graph:
+    def _florentine_families(self) -> nx.Graph:
         """Florentine families marriage network"""
         G = nx.florentine_families_graph()
         G = self._relabel_nodes(G)
         return G
     
-    def get_topology_info(self, G: nx.Graph) -> Dict:
+    def get_topology_info(self) -> Dict:
         """Get information about the topology"""
         return {
-            'num_nodes': G.number_of_nodes(),
-            'num_edges': G.number_of_edges(),
-            'density': nx.density(G),
-            'average_degree': sum(dict(G.degree()).values()) / G.number_of_nodes(),
-            'min_degree': min(dict(G.degree()).values()),
-            'max_degree': max(dict(G.degree()).values()),
-            'most_frequent_degree': max(set(dict(G.degree()).values()), key=list(dict(G.degree()).values()).count),
-            'diameter': nx.diameter(G) if nx.is_connected(G) else 'Not connected',
-            'clustering_coefficient': nx.average_clustering(G),
-            'is_connected': nx.is_connected(G)
+            'topology': self.topology,
+            'num_nodes': self.G.number_of_nodes(),
+            'num_edges': self.G.number_of_edges(),
+            'density': nx.density(self.G),
+            'average_degree': sum(dict(self.G.degree()).values()) / self.G.number_of_nodes(),
+            'min_degree': min(dict(self.G.degree()).values()),
+            'max_degree': max(dict(self.G.degree()).values()),
+            'most_frequent_degree': max(set(dict(self.G.degree()).values()), key=list(dict(self.G.degree()).values()).count),
+            'diameter': nx.diameter(self.G) if nx.is_connected(self.G) else 'Not connected',
+            'clustering_coefficient': nx.average_clustering(self.G),
+            'is_connected': nx.is_connected(self.G)
         }
 

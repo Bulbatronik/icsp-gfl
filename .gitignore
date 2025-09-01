@@ -1,5 +1,6 @@
 .venv/
 .hydra/
+wandb/
 data/
 
 __pycache__/
