@@ -4,18 +4,20 @@ rounds: 50
 rounds_patience: 5
 lr: 0.01
 optimizer: sgd  # Options: sgd, adam
-batch_size: 64
+
 rho: 0.8 # mixing parameter for model update
 
 dataset:
   name: mnist  # Options: mnist, cifar10
-  distribution: iid  # Options: iid, non-iid
+  partition: dirichlet  # Options: iid, dirichlet
+  batch_size: 64
+  alpha: 0.3 # For dirichlet
 
 # Topology
 network:
   num_clients: 10
   topology: random # Options: ring, random, fullycon, star, smallwrld, grid, women, karate, floorent
-  edge_proba: 0.3 # For random topology
+  edge_proba: 0.4 # For random topology
   k: 4
   p: 0.3
 

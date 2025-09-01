@@ -2,6 +2,7 @@
 .hydra/
 wandb/
 data/
+plots/
 
 __pycache__/
 

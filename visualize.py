@@ -1,8 +1,12 @@
 # Import necessary libraries for decentralized federated learning simulation
 import torch
-
+import os
+from collections import Counter
+from typing import Dict
 import networkx as nx
 import numpy as np
+import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
@@ -20,7 +24,7 @@ random.seed(42)
 
 
 # Visualization Functions for Network Topologies
-def plot_topology(G: nx.Graph, title: str, layout_type: str = 'spring') -> None:
+def plot_topology(G: nx.Graph, layout_type: str = 'spring') -> None:
     """Plot a network topology using matplotlib"""
     plt.figure(figsize=(10, 8))
     
@@ -45,9 +49,12 @@ def plot_topology(G: nx.Graph, title: str, layout_type: str = 'spring') -> None:
             width=2,
             alpha=0.7)
     
-    plt.title(title, fontsize=16, fontweight='bold')
+    plt.title("Network of Clients", fontsize=16, fontweight='bold')
     plt.axis('off')
     plt.tight_layout()
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
+    plt.savefig('plots/original_topology.png')
     plt.show()
 
 def plot_interactive_topology(G: nx.Graph, title: str) -> None:
@@ -128,5 +135,41 @@ def plot_interactive_topology(G: nx.Graph, title: str) -> None:
                             x=0.005, y=-0.002 ) ],
                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
+    plt.savefig('plots/original_topology(int).png')
     
     fig.show()
+    
+    
+
+def plot_heatmap(client_data: Dict[int, Dict]) -> None:
+        """Plot heatmap of label distribution across clients"""
+        
+        num_clients = len(client_data)
+        # Prepare data
+        label_counts = np.zeros((num_clients, 10), dtype=int)
+        
+        for client_id in range(num_clients):
+            train_labels = [int(label) for label in client_data[client_id]['train_dataset'].dataset.targets[client_data[client_id]['train_indices']]]
+            counts = Counter(train_labels)
+            for label, count in counts.items():
+                label_counts[client_id, label] = count
+        
+        # Create DataFrame for seaborn
+        df = pd.DataFrame(label_counts, columns=[f'{i}' for i in range(10)], index=[f'{i}' for i in range(num_clients)])
+        
+        plt.figure(figsize=(10, 6))
+        #sns.heatmap(df, annot=True, fmt='d', cmap='YlGnBu')
+        # Fix heatmap to be from 0 to total_labels/num_clients
+        sns.heatmap(df, annot=True, fmt='d', cmap='YlGnBu', vmin=0, vmax=7000)
+        plt.title('Label Distribution Across Clients', fontsize=16)
+        plt.xlabel('Class ID', fontsize=14)
+        plt.ylabel('Client ID', fontsize=14)
+        # Remove ticks completely 
+        plt.tight_layout()
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
+        plt.savefig('plots/data_distribution.png')
+    
+        plt.show()

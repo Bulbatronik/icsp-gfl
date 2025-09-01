@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 import wandb
 
 from topology import NetworkTopology
-from visualize import plot_topology, plot_interactive_topology
+from visualize import plot_topology, plot_interactive_topology, plot_heatmap
 from partitioner import DataDistributor
 from client import DecentralizedClient
 from distributed import run_decentralized_fl
@@ -42,12 +42,21 @@ def main(cfg: DictConfig):
     #    project="decentralized-federated-learning",
     #    config=OmegaConf.to_container(cfg)
     #)
-    
+    num_clients = cfg['network']['num_clients']
+   
     # Set the topology
     network = NetworkTopology(**cfg['network'])
     network.create_topology()
     info = network.get_topology_info()
+    plot_topology(network.G)
     print("Topology info:\n", OmegaConf.to_yaml(info))
+    
+    # Prepare the dataset
+    data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients)
+    data_distributor.load_and_distribute()
+    summary = data_distributor.get_data_summary()
+    plot_heatmap(data_distributor.client_data)
+    print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     
     
     
