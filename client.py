@@ -6,15 +6,27 @@ import random
 
 class DecentralizedClient:
     """Minimal FL client for decentralized learning"""
-    def __init__(self, client_id, train_loader, test_loader, neighbors):
+    def __init__(
+            self, client_id, model, 
+            train_loader,test_loader, 
+            neighbors, selection_method, selction_ratio, dist,
+            optimizer, lr, rho):
+        
         self.client_id = client_id
         self.neighbors = neighbors
+        self.selection_method = selection_method
+        self.selction_ratio = selction_ratio
+        self.dist = dist
+        
         self.train_loader = train_loader
         self.test_loader = test_loader
-        self.model = SimpleMNISTModel()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01)
+        
+        self.model = model #SimpleMNISTModel()
+        # TODO: TRAINING PART (OPTIMIZER, LR)
+        self.optimizer = getattr(optim, optimizer)(self.model.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
-    
+        self.rho = rho
+        
     def train_local(self, epochs=1):
         """Train locally on client data"""
         self.model.train()
@@ -88,7 +100,7 @@ class DecentralizedClient:
             self.received_models = {}
         self.received_models[sender_id] = model_params
     
-    def aggregate_received_models(self, rho=0.1):
+    def aggregate_received_models(self):
         """Aggregate own model with received models from other clients"""
         current_params = self.get_parameters()
         
@@ -110,7 +122,7 @@ class DecentralizedClient:
         # Apply aggregation: (1-rho)*own + rho*received_avg
         aggregated_params = {}
         for name in current_params.keys():
-            aggregated_params[name] = (1 - rho) * current_params[name] + rho * avg_received_params[name]
+            aggregated_params[name] = (1 - self.rho) * current_params[name] + self.rho * avg_received_params[name]
         
         self.set_parameters(aggregated_params)
         

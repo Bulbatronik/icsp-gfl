@@ -16,7 +16,7 @@ import wandb
 from topology import NetworkTopology
 from visualize import plot_topology, plot_interactive_topology, plot_heatmap
 from partitioner import DataDistributor
-from client import DecentralizedClient
+from client import DecentralizedClient, SimpleMNISTModel
 from distributed import run_decentralized_fl
 
 print("Libraries imported")
@@ -58,7 +58,23 @@ def main(cfg: DictConfig):
     plot_heatmap(data_distributor.client_data)
     print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     
-    
+    # Create clients
+    clients = {}
+    neighbor_info = {client_id: list(network.G.neighbors(client_id)) for client_id in range(num_clients)}
+    for client_id in range(num_clients):
+        model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
+        train_loader, test_loader = data_distributor.client_loaders[client_id]
+        clients[client_id] = DecentralizedClient(
+            **cfg['client'],
+            client_id=client_id, 
+            model=model,
+            train_loader=train_loader, 
+            test_loader=test_loader, 
+            neighbors=neighbor_info[client_id],
+            
+        )
+
+    print(clients)
     
 if __name__ == "__main__":
     
