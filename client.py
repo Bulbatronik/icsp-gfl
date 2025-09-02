@@ -2,30 +2,90 @@ from torch import nn, optim
 import torch.nn.functional as F
 import torch
 import random
+import networkx as nx
+import numpy as np
+from scipy.linalg import eigh  # for eigen-decomposition
+from scipy.sparse import csgraph
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 
 class DecentralizedClient:
     """Minimal FL client for decentralized learning"""
     def __init__(
-            self, client_id, model, 
-            train_loader,test_loader, 
-            neighbors, selection_method, selction_ratio, dist,
+            self, client_id, graph, model, 
+            train_loader, test_loader, 
+            selection_method, num_eig, t, selection_ratio, dist,
             optimizer, lr, rho):
         
         self.client_id = client_id
-        self.neighbors = neighbors
+        self.graph = graph
+        self.neighbors = list(self.graph.neighbors(client_id))  # Neighbors of this client
         self.selection_method = selection_method
-        self.selction_ratio = selction_ratio
+        self.num_eig = num_eig
+        self.selection_ratio = selection_ratio
         self.dist = dist
+        self.t = t # diffusion time, small = local, large = global
         
         self.train_loader = train_loader
         self.test_loader = test_loader
         
-        self.model = model #SimpleMNISTModel()
-        # TODO: TRAINING PART (OPTIMIZER, LR)
+        self.model = model # TODO: Model selection
         self.optimizer = getattr(optim, optimizer)(self.model.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
         self.rho = rho
+        
+        
+        # Graph-based neighbors selection if 'selection_method' != random (or broadcast)
+        A = nx.adjacency_matrix(self.graph).toarray()
+        # 1. Heat kernel
+        if selection_method == 'heatkernel':
+            # TODO: Check if correct
+            L = csgraph.laplacian(A, normed=False)  # unnormalized Laplacian
+
+            # Compute first k eigenvectors/eigenvalues
+            eigvals, eigvecs = eigh(L)  # L is symmetric, returns sorted eigenvalues
+
+            # Keep first k eigenvectors (excluding the zero eigenvalue if desired)
+            eigvals = eigvals[1:num_eig+1] # skip first trivial eigenvalue 0
+            eigvecs = eigvecs[:, 1:num_eig+1]
+
+            # Heat/diffusion kernel
+            heat_kernel = eigvecs @ np.diag(np.exp(-self.t * eigvals)) @ eigvecs.T
+
+            # Convert kernel to similarity matrix
+            similarity_matrix = heat_kernel
+
+        elif selection_method == 'spectrclust':
+            # TODO: Check if correct
+            L = csgraph.laplacian(A, normed=True)
+            
+            # Compute first k eigenvectors/eigenvalues
+            eigvals, eigvecs = eigh(L)  # L is symmetric, returns sorted eigenvalues
+            
+            # Keep first k eigenvectors (excluding the zero eigenvalue if desired)
+            eigvecs = eigvecs[:, 1:num_eig+1]
+            node_embeddings = eigvecs / np.linalg.norm(eigvecs, axis=1, keepdims=True) # normalize
+            
+            # Compute similarity matrix based on chosen distance
+            if dist == 'cos':
+                similarity_matrix = cosine_similarity(node_embeddings)
+            elif dist == 'eucl':
+                distances = euclidean_distances(node_embeddings)
+                sigma = np.mean(distances)
+                similarity_matrix = np.exp(-distances**2 / (2 * sigma**2))
+            else:
+                raise ValueError(f"Unknown distance metric: {dist}")                     
+        else:
+            similarity_matrix = A # Default to adjacency if unknown method
+            if selection_method == "broadcast":
+                self.selection_ratio = 1.0 # Broadcast to all neighbors
+            
+            # Store the similarity between the nodes
+        self.neighbors_sim = [similarity_matrix[client_id, nbr] for nbr in self.neighbors]
+        # Compute probabilities (similarities can be negative)
+        
+        #self.neighbors_proba = self.neighbors_sim / np.sum(self.neighbors_sim) # TODO: MB Softmax
+        self.neighbors_proba = np.exp(self.neighbors_sim) / np.sum(np.exp(self.neighbors_sim))
         
     def train_local(self, epochs=1):
         """Train locally on client data"""
@@ -65,21 +125,16 @@ class DecentralizedClient:
                 if name in params:
                     param.copy_(params[name])
     
-    def select_neighbors(self, selection_strategy='random', selection_ratio=0.5):
+    def select_neighbors(self):
         """Select subset of neighbors for communication"""
-        if not self.neighbors:
-            return []
+        #if not self.neighbors:
+        #    return []
         
-        if selection_strategy == 'random':
-            num_selected = max(1, int(len(self.neighbors) * selection_ratio)) # TODO
-            return random.sample(self.neighbors, num_selected)
-        elif selection_strategy == 'broadcast':
-            return self.neighbors.copy()
-        #elif "spectrum":
-            
+        # Based on the similarity with your neighbors do the selection
+        return np.random.choice(self.neighbors, int(len(self.neighbors) * self.selection_ratio), 
+                         replace=False, p=self.neighbors_proba)
         
-        else:   
-            return []
+    
     
     def transmit_to_selected(self, selected_neighbors, all_clients):
         """Transmit model parameters to selected neighbors"""

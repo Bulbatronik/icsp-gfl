@@ -60,21 +60,35 @@ def main(cfg: DictConfig):
     
     # Create clients
     clients = {}
-    neighbor_info = {client_id: list(network.G.neighbors(client_id)) for client_id in range(num_clients)}
+    #neighbor_info = {client_id: list(network.G.neighbors(client_id)) for client_id in range(num_clients)}
     for client_id in range(num_clients):
         model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
         train_loader, test_loader = data_distributor.client_loaders[client_id]
         clients[client_id] = DecentralizedClient(
             **cfg['client'],
             client_id=client_id, 
+            graph=network.G,
             model=model,
             train_loader=train_loader, 
             test_loader=test_loader, 
-            neighbors=neighbor_info[client_id],
+            #neighbors=neighbor_info[client_id],
             
         )
 
     print(clients)
+    
+    # Check the probabilities
+    for client_id, client in clients.items():
+        print(f"Client {client_id} neighbors: {list(client.neighbors)}, similarities: {client.neighbors_sim}, probabilities: {client.neighbors_proba}")
+        # Select some clients
+        selected = client.select_neighbors()
+        print(f"Client {client_id} selected neighbors: {selected}")
+
+        selected = client.select_neighbors()
+        print(f"Client {client_id} selected neighbors: {selected}")
+    
+    # TODO: Check how the training is working
+    
     
 if __name__ == "__main__":
     
