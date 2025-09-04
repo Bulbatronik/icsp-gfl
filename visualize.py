@@ -24,7 +24,7 @@ random.seed(42)
 
 
 # Visualization Functions for Network Topologies
-def plot_topology(G: nx.Graph, layout_type: str = 'spring') -> None:
+def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = None, file_name: str = 'original_topology') -> None:
     """Plot a network topology using matplotlib"""
     plt.figure(figsize=(10, 8))
     
@@ -39,25 +39,49 @@ def plot_topology(G: nx.Graph, layout_type: str = 'spring') -> None:
         pos = nx.spring_layout(G, seed=42)
     
     # Draw the network
-    nx.draw(G, pos, 
-            with_labels=True, 
-            node_color='lightblue', 
-            node_size=1000,
-            font_size=10,
-            font_weight='bold',
-            edge_color='gray',
-            width=2,
-            alpha=0.7)
+    if Adj is not None: # Colorize the edges
+        G = nx.from_numpy_array(Adj)
+        # Get edge weights for coloring
+        edges, weights = zip(*nx.get_edge_attributes(G, 'weight').items())
+
+        # Normalize weights for colormap
+        norm = plt.Normalize(vmin=min(weights), vmax=max(weights))
+        cmap = plt.cm.coolwarm
+        edge_colors = [cmap(norm(w)) for w in weights]
+
+
+        # Show edge similarity values alongside colored links
+        for (i, j), w, color in zip(edges, weights, edge_colors):
+                x0, y0 = pos[i]
+                x1, y1 = pos[j]
+                plt.plot([x0, x1], [y0, y1], color=color, linewidth=4, alpha=0.9)
+                # Place similarity value at midpoint of edge
+                xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+                plt.text(xm, ym, f"{w:.2f}", color='black', fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', edgecolor='none', alpha=0.7, boxstyle='round,pad=0.2'))    
+    
+        # Redraw nodes and labels on top
+        nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1000)
+        nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
+    else:
+        nx.draw(G, pos, 
+                with_labels=True, 
+                node_color='lightblue', 
+                node_size=1000,
+                font_size=10,
+                font_weight='bold',
+                edge_color='gray',
+                width=2,
+                alpha=0.7)
     
     plt.title("Network of Clients", fontsize=16, fontweight='bold')
     plt.axis('off')
     plt.tight_layout()
     if not os.path.exists('plots'):
         os.makedirs('plots')
-    plt.savefig('plots/original_topology.png')
+    plt.savefig(f'plots/{file_name}.png')
     plt.show()
 
-def plot_interactive_topology(G: nx.Graph, title: str) -> None:
+def plot_interactive_topology(G: nx.Graph, file_name: str = 'original_topology(int)') -> None:
     """Create an interactive plot using Plotly"""
     # Get layout positions
     pos = nx.spring_layout(G, seed=42)
@@ -124,7 +148,7 @@ def plot_interactive_topology(G: nx.Graph, title: str) -> None:
     # Create the figure
     fig = go.Figure(data=[edge_trace, node_trace],
                    layout=go.Layout(
-                        title=dict(text=title, font=dict(size=16)),
+                        title=dict(text="Network of Clients", font=dict(size=16)),
                         showlegend=False,
                         hovermode='closest',
                         margin=dict(b=20,l=5,r=5,t=40),
@@ -137,13 +161,13 @@ def plot_interactive_topology(G: nx.Graph, title: str) -> None:
                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
     if not os.path.exists('plots'):
         os.makedirs('plots')
-    plt.savefig('plots/original_topology(int).png')
+    plt.savefig(f'plots/{file_name}.png')
     
     fig.show()
     
     
 
-def plot_heatmap(client_data: Dict[int, Dict]) -> None:
+def plot_heatmap(client_data: Dict[int, Dict], file_name: str = 'data_distribution') -> None:
         """Plot heatmap of label distribution across clients"""
         
         num_clients = len(client_data)
@@ -170,6 +194,6 @@ def plot_heatmap(client_data: Dict[int, Dict]) -> None:
         plt.tight_layout()
         if not os.path.exists('plots'):
             os.makedirs('plots')
-        plt.savefig('plots/data_distribution.png')
+        plt.savefig(f'plots/{file_name}.png')
     
         plt.show()

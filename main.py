@@ -49,14 +49,14 @@ def main(cfg: DictConfig):
     network.create_topology()
     info = network.get_topology_info()
     plot_topology(network.G)
-    print("Topology info:\n", OmegaConf.to_yaml(info))
+    #print("Topology info:\n", OmegaConf.to_yaml(info))
     
     # Prepare the dataset
     data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients)
     data_distributor.load_and_distribute()
     summary = data_distributor.get_data_summary()
     plot_heatmap(data_distributor.client_data)
-    print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
+    #print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     
     # Create clients
     clients = {}
@@ -71,8 +71,6 @@ def main(cfg: DictConfig):
             model=model,
             train_loader=train_loader, 
             test_loader=test_loader, 
-            #neighbors=neighbor_info[client_id],
-            
         )
 
     print(clients)

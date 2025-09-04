@@ -87,6 +87,11 @@ class DecentralizedClient:
         #self.neighbors_proba = self.neighbors_sim / np.sum(self.neighbors_sim) # TODO: MB Softmax
         self.neighbors_proba = np.exp(self.neighbors_sim) / np.sum(np.exp(self.neighbors_sim))
         
+        
+        if self.client_id == 0: # Plot the graph, but this time with the weights
+           ...  # TODO 
+        
+        
     def train_local(self, epochs=1):
         """Train locally on client data"""
         self.model.train()
