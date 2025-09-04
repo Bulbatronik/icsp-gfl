@@ -34,9 +34,10 @@ class DecentralizedClient:
         self.criterion = nn.CrossEntropyLoss()
         self.rho = rho
         
-        
         # Graph-based neighbors selection if 'selection_method' != random (or broadcast)
         A = nx.adjacency_matrix(self.graph).toarray()
+        #self.similarity_matrix = A
+        
         # 1. Heat kernel
         if selection_method == 'heatkernel':
             # TODO: Check if correct
@@ -55,19 +56,20 @@ class DecentralizedClient:
             # Convert kernel to similarity matrix
             similarity_matrix = heat_kernel
 
-        elif selection_method == 'spectrclust':
+        elif selection_method == 'spectr':
             # TODO: Check if correct
             L = csgraph.laplacian(A, normed=True)
             
             # Compute first k eigenvectors/eigenvalues
             eigvals, eigvecs = eigh(L)  # L is symmetric, returns sorted eigenvalues
+            # Normalize the eigenvectors
+            eigvecs = eigvecs / np.linalg.norm(eigvecs, axis=1, keepdims=True)
             
             # Keep first k eigenvectors (excluding the zero eigenvalue if desired)
-            eigvecs = eigvecs[:, 1:num_eig+1]
-            node_embeddings = eigvecs / np.linalg.norm(eigvecs, axis=1, keepdims=True) # normalize
-            
+            node_embeddings = eigvecs[:, 1:num_eig+1]
+           
             # Compute similarity matrix based on chosen distance
-            if dist == 'cos':
+            if dist == 'cosine':
                 similarity_matrix = cosine_similarity(node_embeddings)
             elif dist == 'eucl':
                 distances = euclidean_distances(node_embeddings)
@@ -80,7 +82,9 @@ class DecentralizedClient:
             if selection_method == "broadcast":
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
             
-            # Store the similarity between the nodes
+        self.A_tilde = A * similarity_matrix
+        
+        # Store the similarity between the nodes
         self.neighbors_sim = [similarity_matrix[client_id, nbr] for nbr in self.neighbors]
         # Compute probabilities (similarities can be negative)
         
@@ -88,8 +92,8 @@ class DecentralizedClient:
         self.neighbors_proba = np.exp(self.neighbors_sim) / np.sum(np.exp(self.neighbors_sim))
         
         
-        if self.client_id == 0: # Plot the graph, but this time with the weights
-           ...  # TODO 
+        #if self.client_id == 0: # Plot the graph, but this time with the weights
+        #   ...  # TODO 
         
         
     def train_local(self, epochs=1):

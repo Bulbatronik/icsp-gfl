@@ -22,10 +22,10 @@ client:
   lr: 0.01
   optimizer: SGD  # Options: SGD, Adam
   rho: 0.1 # mixing parameter for model update
-
-  selection_method: heatkernel # Options: random, broadcast, heatkernel, spectrclust
   selection_ratio: 0.5 # Ratio of neighbors selected
-  dist: eucl # Options: eucl, cos 
+  
+  selection_method: spectr # Options: random, broadcast, heatkernel, spectrclust
+  dist: cosine # Options: eucl, cosine 
   num_eig: 3 # Numeber of eigenvalues to consider (<= num_clients)
   t: 40 # Diffusion time, small = local, large = global
 

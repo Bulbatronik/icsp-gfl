@@ -26,11 +26,11 @@ SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
 random.seed(SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+#if torch.cuda.is_available():
+#    torch.cuda.manual_seed(SEED)
+#    torch.cuda.manual_seed_all(SEED)
+#    torch.backends.cudnn.deterministic = True
+#    torch.backends.cudnn.benchmark = False
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
@@ -48,7 +48,7 @@ def main(cfg: DictConfig):
     network = NetworkTopology(**cfg['network'])
     network.create_topology()
     info = network.get_topology_info()
-    plot_topology(network.G)
+    plot_topology(network.G, file_name='original_topology')
     #print("Topology info:\n", OmegaConf.to_yaml(info))
     
     # Prepare the dataset
@@ -84,6 +84,9 @@ def main(cfg: DictConfig):
 
         selected = client.select_neighbors()
         print(f"Client {client_id} selected neighbors: {selected}")
+    
+    # Plot the new topology with weights
+    plot_topology(network.G, Adj=clients[0].A_tilde, file_name='weighted_topology')
     
     # TODO: Check how the training is working
     
