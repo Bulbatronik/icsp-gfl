@@ -14,7 +14,7 @@ class DecentralizedClient:
     def __init__(
             self, client_id, graph, model, 
             train_loader, test_loader, 
-            selection_method, num_eig, t, selection_ratio, dist,
+            selection_method, num_eig, t, tau, selection_ratio, dist,
             optimizer, lr, rho):
         
         self.client_id = client_id
@@ -24,7 +24,8 @@ class DecentralizedClient:
         self.num_eig = num_eig
         self.selection_ratio = selection_ratio
         self.dist = dist
-        self.t = t # diffusion time, small = local, large = global
+        self.t = t # Diffusion time, small = local, large = global
+        self.tau = tau # Temperature for the client selection
         
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -83,13 +84,13 @@ class DecentralizedClient:
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
             
         self.A_tilde = A * similarity_matrix
-        
+           
         # Store the similarity between the nodes
         self.neighbors_sim = [similarity_matrix[client_id, nbr] for nbr in self.neighbors]
         # Compute probabilities (similarities can be negative)
         
         #self.neighbors_proba = self.neighbors_sim / np.sum(self.neighbors_sim) # TODO: MB Softmax
-        self.neighbors_proba = np.exp(self.neighbors_sim) / np.sum(np.exp(self.neighbors_sim))
+        self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
         
         
         #if self.client_id == 0: # Plot the graph, but this time with the weights
@@ -210,3 +211,16 @@ class SimpleMNISTModel(nn.Module):
         x = x.view(-1, 32 * 7 * 7)
         x = F.relu(self.fc1(x))
         return self.fc2(x)
+    
+    
+def constr_prob_matrix(clients):
+    """Recover the transition probability matrix"""
+    n = len(clients)
+    P = np.zeros((n, n))
+    for client_id, client in clients.items():
+        for nbr, proba in zip(client.neighbors, client.neighbors_proba):
+            P[client_id, nbr] = proba
+    # Check that rows sum to 1
+    assert np.allclose(P.sum(axis=1), 1), "Rows of probability matrix do not sum to 1"
+    return P
+    

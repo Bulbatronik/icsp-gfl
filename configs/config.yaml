@@ -28,6 +28,7 @@ client:
   dist: cosine # Options: eucl, cosine 
   num_eig: 3 # Numeber of eigenvalues to consider (<= num_clients)
   t: 40 # Diffusion time, small = local, large = global
+  tau: 1 # Temperature for client selection
 
 # Hydra configuration for the project. DO NOT TOUCH!
 hydra:

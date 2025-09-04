@@ -16,7 +16,7 @@ import wandb
 from topology import NetworkTopology
 from visualize import plot_topology, plot_interactive_topology, plot_heatmap
 from partitioner import DataDistributor
-from client import DecentralizedClient, SimpleMNISTModel
+from client import DecentralizedClient, SimpleMNISTModel, constr_prob_matrix
 from distributed import run_decentralized_fl
 
 print("Libraries imported")
@@ -87,7 +87,8 @@ def main(cfg: DictConfig):
     
     # Plot the new topology with weights
     plot_topology(network.G, Adj=clients[0].A_tilde, file_name='weighted_topology')
-    
+    print(constr_prob_matrix(clients))
+    #plot_topology(network.G, Adj=clients[0].A_proba, file_name=f'proba_topology(tau={clients[0].tau})')
     # TODO: Check how the training is working
     
     
