@@ -8,19 +8,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 
-import random
 import warnings
 warnings.filterwarnings('ignore')
 
 # Increase the quality
 plt.rcParams['figure.dpi'] = 150
-
-# Set random seeds for reproducibility
-torch.manual_seed(42)
-np.random.seed(42)
-random.seed(42)
 
 
 # Visualization Functions for Network Topologies
@@ -63,111 +58,22 @@ def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = No
         nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1000)
         nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
     else:
-        nx.draw(G, pos, 
-                with_labels=True, 
-                node_color='lightblue', 
-                node_size=1000,
-                font_size=10,
-                font_weight='bold',
-                edge_color='gray',
-                width=2,
-                alpha=0.7)
+        # Draw nodes and edges separately instead of using nx.draw() to avoid title issues
+        nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1000)
+        nx.draw_networkx_edges(G, pos, edge_color='gray', width=2, alpha=0.7)
+        nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
     
-    plt.title("Network of Clients", fontsize=16, fontweight='bold')
+    # Add title after drawing the network
+    plt.title("Network of Clients", fontsize=16)
     plt.axis('off')
     plt.tight_layout()
     if not os.path.exists('plots'):
         os.makedirs('plots')
     plt.savefig(f'plots/{file_name}.png')
-    plt.show()
+    return pos
 
-def plot_interactive_topology(G: nx.Graph, file_name: str = 'original_topology(int)') -> None:
-    """Create an interactive plot using Plotly"""
-    # Get layout positions
-    pos = nx.spring_layout(G, seed=42)
     
-    # Extract edges
-    edge_x = []
-    edge_y = []
-    for edge in G.edges():
-        x0, y0 = pos[edge[0]]
-        x1, y1 = pos[edge[1]]
-        edge_x.extend([x0, x1, None])
-        edge_y.extend([y0, y1, None])
-    
-    # Create edge trace
-    edge_trace = go.Scatter(x=edge_x, y=edge_y,
-                           line=dict(width=2, color='#888'),
-                           hoverinfo='none',
-                           mode='lines')
-    
-    # Extract nodes
-    node_x = []
-    node_y = []
-    node_text = []
-    node_info = []
-    
-    for node in G.nodes():
-        x, y = pos[node]
-        node_x.append(x)
-        node_y.append(y)
-        node_text.append(f'Client {node}')
-        
-        # Node info for hover
-        adjacencies = list(G.neighbors(node))
-        node_info.append(f'Client {node}<br>Connections: {len(adjacencies)}<br>Neighbors: {adjacencies}')
-    
-    # Create node trace
-    node_trace = go.Scatter(x=node_x, y=node_y,
-                           mode='markers+text',
-                           hoverinfo='text',
-                           text=node_text,
-                           textposition="middle center",
-                           hovertext=node_info,
-                           marker=dict(showscale=True,
-                                     colorscale='Blues',
-                                     reversescale=True,
-                                     color=[],
-                                     size=30,
-                                     colorbar=dict(
-                                         thickness=15,
-                                         len=0.5,
-                                         x=1.02,
-                                         xanchor="left",
-                                         title="Node Connections"
-                                     ),
-                                     line=dict(width=2)))
-    
-    # Color nodes by number of connections
-    node_adjacencies = []
-    for node in G.nodes():
-        node_adjacencies.append(len(list(G.neighbors(node))))
-    
-    node_trace.marker.color = node_adjacencies
-    
-    # Create the figure
-    fig = go.Figure(data=[edge_trace, node_trace],
-                   layout=go.Layout(
-                        title=dict(text="Network of Clients", font=dict(size=16)),
-                        showlegend=False,
-                        hovermode='closest',
-                        margin=dict(b=20,l=5,r=5,t=40),
-                        annotations=[ dict(
-                            text="",
-                            showarrow=False,
-                            xref="paper", yref="paper",
-                            x=0.005, y=-0.002 ) ],
-                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
-    if not os.path.exists('plots'):
-        os.makedirs('plots')
-    plt.savefig(f'plots/{file_name}.png')
-    
-    fig.show()
-    
-    
-
-def plot_heatmap(client_data: Dict[int, Dict], file_name: str = 'data_distribution') -> None:
+def plot_data_distribution(client_data: Dict[int, Dict], file_name: str = 'data_distribution') -> None:
         """Plot heatmap of label distribution across clients"""
         
         num_clients = len(client_data)
@@ -190,10 +96,107 @@ def plot_heatmap(client_data: Dict[int, Dict], file_name: str = 'data_distributi
         plt.title('Label Distribution Across Clients', fontsize=16)
         plt.xlabel('Class ID', fontsize=14)
         plt.ylabel('Client ID', fontsize=14)
-        # Remove ticks completely 
+        # Adjust layout and save
         plt.tight_layout()
         if not os.path.exists('plots'):
             os.makedirs('plots')
         plt.savefig(f'plots/{file_name}.png')
     
-        plt.show()
+    
+def plot_selection_probability(P: np.ndarray, file_name: str = 'selection_probability_matrix'):
+    plt.figure(figsize=(5, 4))
+    # Do not display zeros
+    mask = P == 0
+    sns.heatmap(P, annot=True, cmap="Blues", fmt=".2f", cbar=False, mask=mask)
+    plt.title("Transition Probability Matrix", fontsize=10)
+    plt.xlabel("To Client")
+    plt.ylabel("From Client")
+    plt.tight_layout()
+    # Save the heatmap
+    if not os.path.exists('plots'):
+        os.makedirs('plots')
+    plt.savefig(f'plots/{file_name}.png')
+
+
+def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_graph'):
+        """
+        Creates and plots a directed graph from an asymmetrical, bidirectional
+        transition probability matrix.
+
+        The edges are colored based on their probability values using a heatmap.
+        A color bar is included to serve as a legend for the edge colors.
+        Bidirectional edges are drawn with a curve to show both directions clearly.
+
+        Args:
+            P (np.ndarray): An asymmetrical transition probability matrix.
+            pos (dict): A dictionary mapping node labels to their (x, y) coordinates
+                        for plotting. Example: {0: (0, 0), 1: (1, 1), ...}.
+            filename (str): The name of the file to save the plot.
+
+        Raises:
+            ValueError: If the input matrix is not a square matrix.
+        """
+        # Check if the matrix is square
+        if P.shape[0] != P.shape[1]:
+            raise ValueError("The input matrix must be square.")
+
+        # Create a directed graph
+        G = nx.DiGraph()
+
+        # Add nodes and edges from the matrix
+        num_nodes = P.shape[0]
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                # Add a directed edge if the transition probability is greater than 0
+                prob = P[i, j]
+                if prob > 0:
+                    G.add_edge(i, j, weight=prob)
+
+        # Extract edge weights for coloring
+        edge_weights = [G[u][v]['weight'] for u, v in G.edges()]
+
+        # Normalize the edge weights to a [0, 1] range for the colormap
+        # Handle the case where all weights are the same to avoid division by zero
+        if not edge_weights or max(edge_weights) == min(edge_weights):
+            norm = mcolors.Normalize(vmin=0, vmax=1)
+        else:
+            norm = mcolors.Normalize(vmin=min(edge_weights), vmax=max(edge_weights))
+
+        # Choose a colormap and map the weights to colors
+        cmap = cm.viridis
+        edge_colors = [cmap(norm(weight)) for weight in edge_weights]
+
+        # Create the plot
+        plt.figure(figsize=(10, 8))
+
+        # Draw nodes
+        nx.draw_networkx_nodes(G, pos, node_size=1000, node_color='lightblue')#, alpha=0.9)
+
+        # Draw edges with the calculated colors and widths
+        # The 'edge_color' parameter accepts a list of colors
+        nx.draw_networkx_edges(G, pos,
+                            edge_color=edge_colors,
+                            width=2.5,
+                            alpha=0.8,
+                            arrows=True,
+                            arrowstyle='->',
+                            arrowsize=20,
+                            connectionstyle='arc3,rad=0.1')
+
+        # Draw node labels
+        nx.draw_networkx_labels(G, pos, font_size=12, font_family='sans-serif')
+
+        # Create a ScalarMappable object for the color bar
+        sm = cm.ScalarMappable(norm=norm, cmap=cmap)
+        sm.set_array(edge_weights)
+
+        # Add the color bar to the plot
+        cbar = plt.colorbar(sm, ax=plt.gca())
+        cbar.set_label('Selection Probability')
+
+        plt.title('Selection Probability Graph', fontsize=16)
+        plt.axis('off')  # Turn off the axis
+        plt.tight_layout()
+        if not os.path.exists('plots'):
+            os.makedirs('plots')
+        plt.savefig(F'plots/{file_name}.png')
