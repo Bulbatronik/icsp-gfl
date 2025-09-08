@@ -1,7 +1,7 @@
 from torch import nn, optim
 import torch.nn.functional as F
 import torch
-import random
+from math import ceil
 import networkx as nx
 import numpy as np
 from scipy.linalg import eigh  # for eigen-decomposition
@@ -15,7 +15,7 @@ class DecentralizedClient:
             self, client_id, graph, model, 
             train_loader, test_loader, 
             selection_method, num_eig, t, tau, selection_ratio, dist,
-            optimizer, lr, rho):
+            optimizer, lr, rho, **kwargs):
         
         self.client_id = client_id
         self.graph = graph
@@ -141,7 +141,7 @@ class DecentralizedClient:
         #    return []
         
         # Based on the similarity with your neighbors do the selection
-        return np.random.choice(self.neighbors, int(len(self.neighbors) * self.selection_ratio), 
+        return np.random.choice(self.neighbors, ceil(len(self.neighbors) * self.selection_ratio), 
                          replace=False, p=self.neighbors_proba)
         
     

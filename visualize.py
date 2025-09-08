@@ -1,5 +1,4 @@
 # Import necessary libraries for decentralized federated learning simulation
-import torch
 import os
 from collections import Counter
 from typing import Dict
@@ -19,7 +18,8 @@ plt.rcParams['figure.dpi'] = 150
 
 
 # Visualization Functions for Network Topologies
-def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = None, file_name: str = 'original_topology') -> None:
+def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = None, 
+                  save_folder: str = './', file_name: str = 'original_topology') -> None:
     """Plot a network topology using matplotlib"""
     plt.figure(figsize=(10, 8))
     
@@ -67,13 +67,14 @@ def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = No
     plt.title("Network of Clients", fontsize=16)
     plt.axis('off')
     plt.tight_layout()
-    if not os.path.exists('plots'):
-        os.makedirs('plots')
-    plt.savefig(f'plots/{file_name}.png')
+    # Create the figure
+    save_path = f'{save_folder}/plots'
+    os.makedirs(save_path, exist_ok=True)
+    plt.savefig(f'{save_path}/{file_name}.png')
     return pos
 
     
-def plot_data_distribution(client_data: Dict[int, Dict], file_name: str = 'data_distribution') -> None:
+def plot_data_distribution(client_data: Dict[int, Dict], save_folder: str = './', file_name: str = 'data_distribution') -> None:
         """Plot heatmap of label distribution across clients"""
         
         num_clients = len(client_data)
@@ -90,7 +91,6 @@ def plot_data_distribution(client_data: Dict[int, Dict], file_name: str = 'data_
         df = pd.DataFrame(label_counts, columns=[f'{i}' for i in range(10)], index=[f'{i}' for i in range(num_clients)])
         
         plt.figure(figsize=(10, 6))
-        #sns.heatmap(df, annot=True, fmt='d', cmap='YlGnBu')
         # Fix heatmap to be from 0 to total_labels/num_clients
         sns.heatmap(df, annot=True, fmt='d', cmap='YlGnBu', vmin=0, vmax=7000)
         plt.title('Label Distribution Across Clients', fontsize=16)
@@ -98,12 +98,12 @@ def plot_data_distribution(client_data: Dict[int, Dict], file_name: str = 'data_
         plt.ylabel('Client ID', fontsize=14)
         # Adjust layout and save
         plt.tight_layout()
-        if not os.path.exists('plots'):
-            os.makedirs('plots')
-        plt.savefig(f'plots/{file_name}.png')
+        # Create the figure
+        save_path = f'{save_folder}/plots'
+        os.makedirs(save_path, exist_ok=True)
+        plt.savefig(f'{save_path}/{file_name}.png')
     
-    
-def plot_selection_probability(P: np.ndarray, file_name: str = 'selection_probability_matrix'):
+def plot_selection_probability(P: np.ndarray, save_folder: str = './', file_name: str = 'selection_probability_matrix'):
     plt.figure(figsize=(5, 4))
     # Do not display zeros
     mask = P == 0
@@ -112,13 +112,13 @@ def plot_selection_probability(P: np.ndarray, file_name: str = 'selection_probab
     plt.xlabel("To Client")
     plt.ylabel("From Client")
     plt.tight_layout()
-    # Save the heatmap
-    if not os.path.exists('plots'):
-        os.makedirs('plots')
-    plt.savefig(f'plots/{file_name}.png')
+    # Create the figure
+    save_path = f'{save_folder}/plots'
+    os.makedirs(save_path, exist_ok=True)
+    plt.savefig(f'{save_path}/{file_name}.png')
 
 
-def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_graph'):
+def plot_transition_graph(P: np.ndarray, pos: dict, save_folder: str = './', file_name: str = 'selection_graph'):
         """
         Creates and plots a directed graph from an asymmetrical, bidirectional
         transition probability matrix.
@@ -139,10 +139,8 @@ def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_
         # Check if the matrix is square
         if P.shape[0] != P.shape[1]:
             raise ValueError("The input matrix must be square.")
-
         # Create a directed graph
         G = nx.DiGraph()
-
         # Add nodes and edges from the matrix
         num_nodes = P.shape[0]
         for i in range(num_nodes):
@@ -151,27 +149,22 @@ def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_
                 prob = P[i, j]
                 if prob > 0:
                     G.add_edge(i, j, weight=prob)
-
         # Extract edge weights for coloring
         edge_weights = [G[u][v]['weight'] for u, v in G.edges()]
-
         # Normalize the edge weights to a [0, 1] range for the colormap
         # Handle the case where all weights are the same to avoid division by zero
         if not edge_weights or max(edge_weights) == min(edge_weights):
             norm = mcolors.Normalize(vmin=0, vmax=1)
         else:
             norm = mcolors.Normalize(vmin=min(edge_weights), vmax=max(edge_weights))
-
         # Choose a colormap and map the weights to colors
         cmap = cm.viridis
         edge_colors = [cmap(norm(weight)) for weight in edge_weights]
 
         # Create the plot
         plt.figure(figsize=(10, 8))
-
         # Draw nodes
         nx.draw_networkx_nodes(G, pos, node_size=1000, node_color='lightblue')#, alpha=0.9)
-
         # Draw edges with the calculated colors and widths
         # The 'edge_color' parameter accepts a list of colors
         nx.draw_networkx_edges(G, pos,
@@ -182,14 +175,12 @@ def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_
                             arrowstyle='->',
                             arrowsize=20,
                             connectionstyle='arc3,rad=0.1')
-
         # Draw node labels
         nx.draw_networkx_labels(G, pos, font_size=12, font_family='sans-serif')
 
         # Create a ScalarMappable object for the color bar
         sm = cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array(edge_weights)
-
         # Add the color bar to the plot
         cbar = plt.colorbar(sm, ax=plt.gca())
         cbar.set_label('Selection Probability')
@@ -197,6 +188,7 @@ def plot_transition_graph(P: np.ndarray, pos: dict, file_name: str = 'selection_
         plt.title('Selection Probability Graph', fontsize=16)
         plt.axis('off')  # Turn off the axis
         plt.tight_layout()
-        if not os.path.exists('plots'):
-            os.makedirs('plots')
-        plt.savefig(F'plots/{file_name}.png')
+        # Create the figure
+        save_path = f'{save_folder}/plots'
+        os.makedirs(save_path, exist_ok=True)
+        plt.savefig(f'{save_path}/{file_name}.png')

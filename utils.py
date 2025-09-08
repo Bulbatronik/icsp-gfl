@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import random
 
+
 def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -55,7 +56,7 @@ def experiment_name(cfg):
     federation_part += "_"
     federation_part += f"pat-{cfg['federation']['rounds_patience']}"
     
-    client_part = f"M-{cfg['client']['model']}"
+    client_part = f"M-{cfg['client']['architecture']}"
     client_part += "_"
     client_part += f"O-{cfg['client']['optimizer']}"
     client_part += "_"

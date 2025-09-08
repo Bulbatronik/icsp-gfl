@@ -1,17 +1,11 @@
 # Import necessary libraries for decentralized federated learning simulation
-import torch
-
 import hydra # Import hydra for configuration management
 from omegaconf import DictConfig, OmegaConf
 
-import networkx as nx
-import numpy as np
-import matplotlib.pyplot as plt
-import random
+import os
+from copy import deepcopy
 import warnings
 warnings.filterwarnings('ignore')
-
-
 
 import wandb
 
@@ -25,7 +19,7 @@ from utils import set_seed, experiment_name
 print("Libraries imported")
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="config")
+@hydra.main(version_base=None, config_path="configs", config_name="config_debug")
 def main(cfg: DictConfig):
     set_seed(cfg['seed'])
     
@@ -38,7 +32,8 @@ def main(cfg: DictConfig):
     #)
     
     # Experiment name
-    exp_name = experiment_name(cfg)
+    exp_name = f"results/{experiment_name(cfg)}"
+    os.makedirs(exp_name, exist_ok=True)
     
     
     # Get number of clients from config
@@ -48,7 +43,7 @@ def main(cfg: DictConfig):
     network = NetworkTopology(**cfg['network'])
     network.create_topology()
     info = network.get_topology_info()
-    pos = plot_topology(network.G, file_name='original_topology') # Store the positions of the nodes for better visualization
+    pos = plot_topology(network.G, save_folder=exp_name, file_name='original_topology') # Store the positions of the nodes for better visualization
     #print("Topology info:\n", OmegaConf.to_yaml(info))
     
     # Prepare the dataset
@@ -59,15 +54,15 @@ def main(cfg: DictConfig):
     #print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     
     # Create clients
+    model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
     clients = {}
     for client_id in range(num_clients):
-        model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
         train_loader, test_loader = data_distributor.client_loaders[client_id]
         clients[client_id] = DecentralizedClient(
             **cfg['client'],
             client_id=client_id, 
             graph=network.G,
-            model=model,
+            model=deepcopy(model) ,
             train_loader=train_loader, 
             test_loader=test_loader, 
         )
@@ -83,12 +78,12 @@ def main(cfg: DictConfig):
         print(f"Client {client_id} selected neighbors: {selected}")
     
     # Plot the new topology with weights
-    plot_topology(network.G, Adj=clients[0].A_tilde, file_name='weighted_topology')
+    plot_topology(network.G, Adj=clients[0].A_tilde, save_folder=exp_name, file_name='weighted_topology')
     # Plot the selection probability matrix
     P = constr_prob_matrix(clients)
-    plot_selection_probability(P, file_name = 'selection_probability_matrix')
+    plot_selection_probability(P, save_folder=exp_name, file_name = 'selection_probability_matrix')
     # Plot the graph where edges represent the selection probability
-    plot_transition_graph(P, pos, file_name='selection_graph')
+    plot_transition_graph(P, pos, save_folder=exp_name, file_name='selection_graph')
     
     
     # TODO: Try training
