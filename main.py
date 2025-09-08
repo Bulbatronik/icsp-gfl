@@ -59,14 +59,14 @@ def main(cfg: DictConfig):
     model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
     clients = {}
     for client_id in range(num_clients):
-        train_loader, test_loader = data_distributor.client_loaders[client_id]
+        loaders = data_distributor.client_loaders[client_id]
         clients[client_id] = DecentralizedClient(
             **cfg['client'],
             client_id=client_id, 
             graph=network.G,
             model=deepcopy(model) ,
-            train_loader=train_loader, 
-            test_loader=test_loader, 
+            train_loader=loaders["train_loader"], 
+            test_loader=loaders["test_loader"], 
         )
     #print(clients)
     
@@ -88,12 +88,19 @@ def main(cfg: DictConfig):
     plot_transition_graph(P, pos, save_folder=exp_name, file_name='selection_graph')
     
     
-    # TODO: Try training
+    # Run decentralized federated learning
+    print("Starting decentralized federated learning...")
+    results = run_decentralized_fl(
+        **cfg['federation'],
+        clients=clients,
+    )
     
+    # Save the results to a file in the experiment directory
+    import json
+    with open(f"{exp_name}/results.json", 'w') as f:
+        json.dump(results, f, indent=4)
     
-    
-    
-    
+    print(f"Training completed. Results saved to {exp_name}/results.json")
     
 if __name__ == "__main__":
     

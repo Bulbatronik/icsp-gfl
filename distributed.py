@@ -1,5 +1,3 @@
-from partitioner import DataDistributor
-from client import DecentralizedClient
 import numpy as np
 
 
@@ -21,6 +19,7 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         # Phase 1: Each client trains locally
         train_losses = []
         for client_id, client in clients.items():
+            print(f"Client {client_id} training locally...")
             loss = client.train_local()
             train_losses.append(loss)
         
@@ -32,16 +31,18 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
             transmission_log[client_id] = selected_neighbors
             
             # Transmit model to selected neighbors directly
-            if selected_neighbors:
+            if len(selected_neighbors) > 0:
                 client.transmit_to_selected(selected_neighbors, clients)
         
         # Phase 3: Model aggregation
         for client_id, client in clients.items():
+            print(f"Client {client_id} aggregating models...")
             client.aggregate_received_models()
         
         # Evaluate all clients
         test_accuracies = []
         for client_id, client in clients.items():
+            print(f"Client {client_id} evaluating...")
             acc = client.evaluate()
             test_accuracies.append(acc)
         
