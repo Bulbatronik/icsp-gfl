@@ -72,5 +72,6 @@ def experiment_name(cfg):
         dataset_part,
         federation_part,
         client_part,
+        f"s-{cfg['seed']}"
         ]
     return "_".join(name_parts)

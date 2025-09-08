@@ -74,7 +74,7 @@ class DecentralizedClient:
                 similarity_matrix = cosine_similarity(node_embeddings)
             elif dist == 'eucl':
                 distances = euclidean_distances(node_embeddings)
-                sigma = np.mean(distances)
+                sigma = np.mean(distances) # Gaussian Kernel
                 similarity_matrix = np.exp(-distances**2 / (2 * sigma**2))
             else:
                 raise ValueError(f"Unknown distance metric: {dist}")                     

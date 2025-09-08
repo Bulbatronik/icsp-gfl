@@ -1,0 +1,18 @@
+
+
+# Default configuration for decentralized federated learning simulation
+
+defaults:
+  - federation: base
+  - dataset: mnist_iid
+  - network: random10
+  - client: broadcast
+
+seed: 42
+
+# Hydra configuration for the project. DO NOT TOUCH!
+hydra:
+  run:
+    dir: .        
+  job:
+    chdir: false   
