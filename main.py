@@ -80,7 +80,7 @@ def main(cfg: DictConfig):
     #    print(f"Client {client_id} selected neighbors: {selected}")
     
     # Plot the new topology with weights
-    plot_topology(network.G, Adj=clients[0].A_tilde, save_folder=exp_name, file_name='weighted_topology')
+    plot_topology(network.G, Adj=clients[0].A_tilde, pos=pos, save_folder=exp_name, file_name='weighted_topology')
     # Plot the selection probability matrix
     P = constr_prob_matrix(clients)
     plot_selection_probability(P, save_folder=exp_name, file_name = 'selection_probability_matrix')
