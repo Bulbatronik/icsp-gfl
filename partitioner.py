@@ -34,10 +34,10 @@ class DataDistributor:
         # Partition the data among the clients
         if self.partition == 'iid':
             self._distribute_iid_data(train_dataset, test_dataset)
-        elif self.partition == 'dirichlet':
+        elif self.partition == 'dir':
             self._distribute_dirichlet_data(train_dataset, test_dataset)
         else:
-            raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dirichlet'")
+            raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dir'")
         
         
     def _load_mnist_data(self, data_dir: str = './data') -> Tuple[Dataset, Dataset]:
@@ -174,7 +174,7 @@ class DataDistributor:
             }
         
 
-    def _distribute_dirichlet_data(self, train_dataset: Dataset, test_dataset: Dataset, data_dir: str = './data', verbose=False) -> Dict[int, Dict]:
+    def _distribute_dirichlet_data(self, train_dataset: Dataset, test_dataset: Dataset, verbose=False) -> Dict[int, Dict]:
         """Distribute MNIST data in a Non-IID manner using Dirichlet distribution for training,
         and uniformly (IID) for test set."""
         # Train labels

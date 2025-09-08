@@ -20,23 +20,15 @@ from visualize import plot_topology, plot_selection_probability, plot_data_distr
 from partitioner import DataDistributor
 from client import DecentralizedClient, SimpleMNISTModel, constr_prob_matrix
 from distributed import run_decentralized_fl
+from utils import set_seed, experiment_name
 
 print("Libraries imported")
-
-# Set random seeds for reproducibility and CUDA determinism
-SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
-random.seed(SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig):
+    set_seed(cfg['seed'])
+    
     print("Configuration:\n", OmegaConf.to_yaml(cfg))
     
     # Initialize Weights & Biases for experiment tracking
@@ -44,6 +36,12 @@ def main(cfg: DictConfig):
     #    project="decentralized-federated-learning",
     #    config=OmegaConf.to_container(cfg)
     #)
+    
+    # Experiment name
+    exp_name = experiment_name(cfg)
+    
+    
+    # Get number of clients from config
     num_clients = cfg['network']['num_clients']
    
     # Set the topology

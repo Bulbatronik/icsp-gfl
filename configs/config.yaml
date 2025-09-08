@@ -1,12 +1,13 @@
-# Default configuration for decentralized federated learning simulation
-epochs: 5
-rounds: 50
-rounds_patience: 5
+seed: 42
 
+# Default configuration for decentralized federated learning simulation
+federation: 
+  rounds: 50
+  rounds_patience: 5
 
 dataset:
   name: mnist  # Options: mnist, cifar10
-  partition: dirichlet  # Options: iid, dirichlet
+  partition: dir  # Options: iid, dirichlet
   batch_size: 64
   alpha: 0.3 # For dirichlet
 
@@ -19,7 +20,9 @@ network:
   p: 0.3 # for random topology
 
 client:
+  model: mnistCNN # NOTE: Not used for now
   lr: 0.01
+  epochs: 5
   optimizer: SGD  # Options: SGD, Adam
   rho: 0.1 # mixing parameter for model update
   selection_ratio: 0.5 # Ratio of neighbors selected
