@@ -1,7 +1,4 @@
-
-
 # Default configuration for decentralized federated learning simulation
-
 defaults:
   - federation: base
   - dataset: mnist_iid

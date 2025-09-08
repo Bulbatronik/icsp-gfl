@@ -25,13 +25,13 @@ def plot_topology(G: nx.Graph, layout_type: str = 'spring', Adj: np.ndarray = No
     
     # Choose layout
     if layout_type == 'spring':
-        pos = nx.spring_layout(G, seed=42)
+        pos = nx.spring_layout(G)
     elif layout_type == 'circular':
         pos = nx.circular_layout(G)
     elif layout_type == 'shell':
         pos = nx.shell_layout(G)
     else:
-        pos = nx.spring_layout(G, seed=42)
+        pos = nx.spring_layout(G)
     
     # Draw the network
     if Adj is not None: # Colorize the edges

@@ -118,18 +118,24 @@ class NetworkTopology:
         """Davis Southern women social network"""
         G = nx.davis_southern_women_graph()
         G = self._relabel_nodes(G)
+        self.num_clients = G.number_of_nodes()
+        self.clients = list(range(self.num_clients))
         return G
     
     def _karate_graph(self) -> nx.Graph:
         """Zachary’s Karate Club graph"""
         G = nx.karate_club_graph()
         G = self._relabel_nodes(G)
+        self.num_clients = G.number_of_nodes()
+        self.clients = list(range(self.num_clients))
         return G
     
     def _florentine_families(self) -> nx.Graph:
         """Florentine families marriage network"""
         G = nx.florentine_families_graph()
         G = self._relabel_nodes(G)
+        self.num_clients = G.number_of_nodes()
+        self.clients = list(range(self.num_clients))
         return G
     
     def get_topology_info(self) -> Dict:

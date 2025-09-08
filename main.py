@@ -30,17 +30,20 @@ def main(cfg: DictConfig):
     #    project="decentralized-federated-learning",
     #    config=OmegaConf.to_container(cfg)
     #)
-    
-    # Experiment name
-    exp_name = f"results/{experiment_name(cfg)}"
-    os.makedirs(exp_name, exist_ok=True)
-    
-    # Get number of clients from config
-    num_clients = cfg['network']['num_clients']
    
     # Set the topology
     network = NetworkTopology(**cfg['network'])
     network.create_topology()
+    
+    # Change the number of clients (for cases like "karate club", etc.)
+    num_clients = network.num_clients
+    cfg['network']['num_clients'] = num_clients
+    
+    # Experiment name where the figures will be saved
+    exp_name = f"results/{experiment_name(cfg)}"
+    os.makedirs(exp_name, exist_ok=True)
+    
+
     #info = network.get_topology_info()
     #print("Topology info:\n", OmegaConf.to_yaml(info))
     pos = plot_topology(network.G, save_folder=exp_name, file_name='original_topology') # Store the positions of the nodes for better visualization
@@ -86,6 +89,11 @@ def main(cfg: DictConfig):
     
     
     # TODO: Try training
+    
+    
+    
+    
+    
     
 if __name__ == "__main__":
     
