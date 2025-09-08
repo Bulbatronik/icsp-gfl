@@ -1,5 +1,5 @@
 num_clients: 10
-topology: random # Options: ring, random, fullycon, star, smallwrld, grid, women, karate, floorent
+topology: smallwrld # Options: ring, random, fullycon, star, smallwrld, grid, women, karate, floorent
 edge_proba: 0.4 # For random topology
 k: 4 # for smallwrld topology
 p: 0.3 # for smallwrld topology

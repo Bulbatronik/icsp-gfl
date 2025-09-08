@@ -15,7 +15,7 @@ class DecentralizedClient:
             self, client_id, graph, model, 
             train_loader, test_loader, 
             selection_method, num_eig, t, tau, selection_ratio, dist,
-            optimizer, lr, rho, **kwargs):
+            optimizer, epochs, lr, rho, **kwargs):
         
         self.client_id = client_id
         self.graph = graph
@@ -30,7 +30,8 @@ class DecentralizedClient:
         self.train_loader = train_loader
         self.test_loader = test_loader
         
-        self.model = model # TODO: Model selection
+        self.model = model # TODO: Model selections
+        self.epochs = epochs
         self.optimizer = getattr(optim, optimizer)(self.model.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
         self.rho = rho
@@ -97,11 +98,11 @@ class DecentralizedClient:
         #   ...  # TODO 
         
         
-    def train_local(self, epochs=1):
+    def train_local(self):
         """Train locally on client data"""
         self.model.train()
         total_loss = 0
-        for _ in range(epochs):
+        for _ in range(self.epochs):
             for data, target in self.train_loader:
                 self.optimizer.zero_grad()
                 output = self.model(data)

@@ -41,8 +41,10 @@ class NetworkTopology:
             self.G = self._women_social_network()
         elif self.topology == "karate":
             self.G = self._karate_graph()
-        elif self.topology == "florentine":
+        elif self.topology == "floorent":
             self.G = self._florentine_families()
+        else:
+            raise ValueError(f"Unknown topology type: {self.topology}")
 
     def _relabel_nodes(self, G: nx.Graph) -> nx.Graph:
         """Relabel nodes to be sequential integers"""
