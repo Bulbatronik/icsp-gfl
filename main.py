@@ -20,15 +20,30 @@ from utils import set_seed, experiment_name
 print("Libraries imported")
 
 
+
+
+
+
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig):
     set_seed(cfg['seed'])
     
     print("Configuration:\n", OmegaConf.to_yaml(cfg))
     
-    # Check if CUDA is available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Check if device is specified in client config, default to CUDA if available
+    requested_device = cfg['federation'].get('device', 'cuda')
+    if requested_device == 'cuda' and not torch.cuda.is_available():
+        print("\033[93mWarning: CUDA requested but not available. Falling back to CPU.\033[0m")
+        device = torch.device('cpu')
+    else:
+        device = torch.device(requested_device)
+    
     print(f"Using device: {device}")
+    
+    # Clear cuda cache if using CUDA
+    if device.type == 'cuda':
+        torch.cuda.empty_cache()
+    
     
     # Initialize Weights & Biases for experiment tracking
     #run = wandb.init(

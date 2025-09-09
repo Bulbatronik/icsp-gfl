@@ -1,7 +1,4 @@
-from partitioner import DataDistributor
-from client import DecentralizedClient
 import numpy as np
-import torch
 
 
 def run_decentralized_fl(clients, rounds, rounds_patience):
@@ -11,7 +8,20 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
     # Check if all clients have the same device and print it
     if hasattr(clients[0], 'device'):
         device = clients[0].device
-        print(f"Running on device: {device}")
+        all_same_device = all(client.device == device for client in clients.values())
+        
+        if all_same_device:
+            print(f"Running on device: {device}")
+        else:
+            print("\033[93mWarning: Not all clients are using the same device:\033[0m")
+            device_counts = {}
+            for client_id, client in clients.items():
+                if client.device not in device_counts:
+                    device_counts[client.device] = []
+                device_counts[client.device].append(client_id)
+            
+            for device, client_ids in device_counts.items():
+                print(f"  - Device {device}: Clients {client_ids}")
     
     # Training rounds
     results = []

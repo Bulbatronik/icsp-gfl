@@ -27,10 +27,22 @@ class DecentralizedClient:
         self.t = t # Diffusion time, small = local, large = global
         self.tau = tau # Temperature for the client selection
         
-        # Set device
-        self.device = device if device is not None else (
-            torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        )
+        # Set device with better error handling
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print(f"Client {client_id}: No device specified, using {self.device}")
+        else:
+            try:
+                if isinstance(device, str):
+                    self.device = torch.device(device)
+                else:
+                    self.device = device
+                if self.device.type == 'cuda' and not torch.cuda.is_available():
+                    print(f"\033[93mWarning: Client {client_id} requested CUDA but it's not available. Falling back to CPU.\033[0m")
+                    self.device = torch.device('cpu')
+            except Exception as e:
+                print(f"\033[91mError: Client {client_id} couldn't use device {device}. Error: {e}. Falling back to CPU.\033[0m")
+                self.device = torch.device('cpu')
         
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -101,11 +113,6 @@ class DecentralizedClient:
         
         #self.neighbors_proba = self.neighbors_sim / np.sum(self.neighbors_sim) # TODO: MB Softmax
         self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
-        
-        
-        #if self.client_id == 0: # Plot the graph, but this time with the weights
-        #   ...  # TODO 
-        
         
     def train_local(self):
         """Train locally on client data"""
@@ -222,11 +229,22 @@ class SimpleMNISTModel(nn.Module):
         self.fc1 = nn.Linear(32 * 7 * 7, 64)
         self.fc2 = nn.Linear(64, 10)
         
-        # Set device if provided
-        self.device = device if device is not None else (
-            torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        )
-        self.to(self.device)
+        # Set device with better error handling
+        try:
+            if device is None:
+                self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            elif isinstance(device, str):
+                self.device = torch.device(device)
+                if self.device.type == 'cuda' and not torch.cuda.is_available():
+                    print("\033[93mWarning: CUDA requested for model but not available. Falling back to CPU.\033[0m")
+                    self.device = torch.device('cpu')
+            else:
+                self.device = device
+            self.to(self.device)
+        except Exception as e:
+            print(f"\033[91mError setting device for model: {e}. Falling back to CPU.\033[0m")
+            self.device = torch.device('cpu')
+            self.to(self.device)
         
     def forward(self, x):
         # Move input to the device if it's not already there

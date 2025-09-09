@@ -3,11 +3,10 @@ defaults:
   - federation: base
   - dataset: mnist_iid
   - network: random10
-  - client: broadcast
+  - client: random
 
 seed: 42
 
-# Hydra configuration for the project. DO NOT TOUCH!
 hydra:
   run:
     dir: .        
