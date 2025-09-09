@@ -3,7 +3,7 @@
 .hydra/
 wandb/
 data/
-plots/
+results/
 
 __pycache__/
 
