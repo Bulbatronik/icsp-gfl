@@ -15,7 +15,7 @@ class DecentralizedClient:
             self, client_id, graph, model, 
             train_loader, test_loader, 
             selection_method, num_eig, t, tau, selection_ratio, dist,
-            optimizer, epochs, lr, rho, **kwargs):
+            optimizer, epochs, lr, rho, device=None, **kwargs):
         
         self.client_id = client_id
         self.graph = graph
@@ -27,10 +27,19 @@ class DecentralizedClient:
         self.t = t # Diffusion time, small = local, large = global
         self.tau = tau # Temperature for the client selection
         
+        # Set device
+        self.device = device if device is not None else (
+            torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        )
+        
         self.train_loader = train_loader
         self.test_loader = test_loader
         
         self.model = model # TODO: Model selections
+        # Ensure model is on the correct device
+        if hasattr(model, 'device') and model.device != self.device:
+            self.model.to(self.device)
+            
         self.epochs = epochs
         self.optimizer = getattr(optim, optimizer)(self.model.parameters(), lr=lr)
         self.criterion = nn.CrossEntropyLoss()
@@ -104,6 +113,9 @@ class DecentralizedClient:
         total_loss = 0
         for _ in range(self.epochs):
             for data, target in self.train_loader:
+                # Move data to device
+                data, target = data.to(self.device), target.to(self.device)
+                
                 self.optimizer.zero_grad()
                 output = self.model(data)
                 loss = self.criterion(output, target)
@@ -119,6 +131,9 @@ class DecentralizedClient:
         total = 0
         with torch.no_grad():
             for data, target in self.test_loader:
+                # Move data to device
+                data, target = data.to(self.device), target.to(self.device)
+                
                 output = self.model(data)
                 pred = output.argmax(dim=1)
                 correct += pred.eq(target).sum().item()
@@ -134,7 +149,8 @@ class DecentralizedClient:
         with torch.no_grad():
             for name, param in self.model.named_parameters():
                 if name in params:
-                    param.copy_(params[name])
+                    # Make sure the parameter is on the same device
+                    param.copy_(params[name].to(self.device))
     
     def select_neighbors(self):
         """Select subset of neighbors for communication"""
@@ -198,7 +214,7 @@ class DecentralizedClient:
         
 class SimpleMNISTModel(nn.Module):
     """Lightweight CNN for MNIST"""
-    def __init__(self):
+    def __init__(self, device=None):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
@@ -206,7 +222,17 @@ class SimpleMNISTModel(nn.Module):
         self.fc1 = nn.Linear(32 * 7 * 7, 64)
         self.fc2 = nn.Linear(64, 10)
         
+        # Set device if provided
+        self.device = device if device is not None else (
+            torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        )
+        self.to(self.device)
+        
     def forward(self, x):
+        # Move input to the device if it's not already there
+        if x.device != self.device:
+            x = x.to(self.device)
+            
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = x.view(-1, 32 * 7 * 7)

@@ -3,6 +3,7 @@ import hydra # Import hydra for configuration management
 from omegaconf import DictConfig, OmegaConf
 
 import os
+import torch
 from copy import deepcopy
 import warnings
 warnings.filterwarnings('ignore')
@@ -24,6 +25,10 @@ def main(cfg: DictConfig):
     set_seed(cfg['seed'])
     
     print("Configuration:\n", OmegaConf.to_yaml(cfg))
+    
+    # Check if CUDA is available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     
     # Initialize Weights & Biases for experiment tracking
     #run = wandb.init(
@@ -56,7 +61,7 @@ def main(cfg: DictConfig):
     plot_data_distribution(data_distributor.client_data, save_folder=exp_name, file_name='data_distribution')
     
     # Create clients
-    model = SimpleMNISTModel() # TODO: ADD SELECTION FOR MNIST AND CIFAR10
+    model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
     clients = {}
     for client_id in range(num_clients):
         loaders = data_distributor.client_loaders[client_id]
@@ -64,9 +69,10 @@ def main(cfg: DictConfig):
             **cfg['client'],
             client_id=client_id, 
             graph=network.G,
-            model=deepcopy(model) ,
+            model=deepcopy(model),
             train_loader=loaders["train_loader"], 
-            test_loader=loaders["test_loader"], 
+            test_loader=loaders["test_loader"],
+            device=device  # Pass the device to the client
         )
     #print(clients)
     
@@ -88,7 +94,7 @@ def main(cfg: DictConfig):
     plot_transition_graph(P, pos, save_folder=exp_name, file_name='selection_graph')
     
     
-    # Run decentralized federated learning
+        # Run decentralized federated learning
     print("Starting decentralized federated learning...")
     results = run_decentralized_fl(
         **cfg['federation'],

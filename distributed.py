@@ -1,9 +1,17 @@
+from partitioner import DataDistributor
+from client import DecentralizedClient
 import numpy as np
+import torch
 
 
 def run_decentralized_fl(clients, rounds, rounds_patience):
     """Main decentralized FL simulation with 3-phase communication"""
     print(f"Selection: {clients[0].selection_method} ({clients[0].selection_ratio*100:.0f}% of neighbors)")
+    
+    # Check if all clients have the same device and print it
+    if hasattr(clients[0], 'device'):
+        device = clients[0].device
+        print(f"Running on device: {device}")
     
     # Training rounds
     results = []
