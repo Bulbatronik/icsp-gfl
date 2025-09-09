@@ -3,7 +3,7 @@ lr: 0.01
 epochs: 5
 optimizer: SGD  # Options: SGD, Adam
 rho: 0.1 # mixing parameter for model update
-selection_ratio: 0.5 # Ratio of neighbors selected
+selection_ratio: 1.0 # Ratio of neighbors selected
 
 selection_method: broadcast # Options: random, broadcast, heatkernel, spectrclust
 dist: cosine # Options: eucl, cosine 

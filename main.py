@@ -16,12 +16,7 @@ from partitioner import DataDistributor
 from client import DecentralizedClient, SimpleMNISTModel, constr_prob_matrix
 from distributed import run_decentralized_fl
 from utils import set_seed, experiment_name
-
 print("Libraries imported")
-
-
-
-
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
@@ -69,8 +64,11 @@ def main(cfg: DictConfig):
     #print("Topology info:\n", OmegaConf.to_yaml(info))
     pos = plot_topology(network.G, save_folder=exp_name, file_name='original_topology') # Store the positions of the nodes for better visualization
     
-    # Log the topology figure to wandb
-    wandb.log({"original_topology": wandb.Image(f"{exp_name}/plots/original_topology.png")})
+    # Create a dictionary to collect all initial visualizations
+    initial_visuals = {}
+    
+    # Add the topology figure to the collection
+    initial_visuals["original_topology"] = wandb.Image(f"{exp_name}/plots/original_topology.png")
     
     # Prepare the dataset
     data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients, verbose=False)
@@ -79,8 +77,8 @@ def main(cfg: DictConfig):
     #print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     plot_data_distribution(data_distributor.client_data, save_folder=exp_name, file_name='data_distribution')
     
-    # Log the data distribution figure to wandb
-    wandb.log({"data_distribution": wandb.Image(f"{exp_name}/plots/data_distribution.png")})
+    # Add the data distribution figure to the collection
+    initial_visuals["data_distribution"] = wandb.Image(f"{exp_name}/plots/data_distribution.png")
     
     # Create clients
     model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION

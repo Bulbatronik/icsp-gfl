@@ -83,7 +83,8 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         for client_id, acc in enumerate(test_accuracies):
             metrics[f'client_{client_id}_accuracy'] = acc
             
-        wandb.log(metrics, step=round_num+1)
+        # Log to wandb without specifying step to ensure monotonically increasing steps
+        wandb.log(metrics)
         
         print(f"Round {round_num + 1}: Loss={avg_loss:.3f}, Accuracy={avg_acc:.1f}%")
 
