@@ -45,12 +45,13 @@ def main(cfg: DictConfig):
         torch.cuda.empty_cache()
     
     
-    # Initialize Weights & Biases for experiment tracking
-    #run = wandb.init(
-    #    project="decentralized-federated-learning",
-    #    config=OmegaConf.to_container(cfg)
-    #)
-   
+    run = wandb.init(
+        project="decentralized-federated-learning",
+        name=experiment_name(cfg),
+        # Don't specify entity to use default personal space
+        config=OmegaConf.to_container(cfg)
+    )
+    
     # Set the topology
     network = NetworkTopology(**cfg['network'])
     network.create_topology()
@@ -68,12 +69,18 @@ def main(cfg: DictConfig):
     #print("Topology info:\n", OmegaConf.to_yaml(info))
     pos = plot_topology(network.G, save_folder=exp_name, file_name='original_topology') # Store the positions of the nodes for better visualization
     
+    # Log the topology figure to wandb
+    wandb.log({"original_topology": wandb.Image(f"{exp_name}/plots/original_topology.png")})
+    
     # Prepare the dataset
     data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients, verbose=False)
     data_distributor.load_and_distribute()
     #summary = data_distributor.get_data_summary()
     #print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     plot_data_distribution(data_distributor.client_data, save_folder=exp_name, file_name='data_distribution')
+    
+    # Log the data distribution figure to wandb
+    wandb.log({"data_distribution": wandb.Image(f"{exp_name}/plots/data_distribution.png")})
     
     # Create clients
     model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
@@ -108,8 +115,15 @@ def main(cfg: DictConfig):
     # Plot the graph where edges represent the selection probability
     plot_transition_graph(P, pos, save_folder=exp_name, file_name='selection_graph')
     
+    # Log these visualizations to wandb
+    wandb.log({
+        "weighted_topology": wandb.Image(f"{exp_name}/plots/weighted_topology.png"),
+        "selection_probability_matrix": wandb.Image(f"{exp_name}/plots/selection_probability_matrix.png"),
+        "selection_graph": wandb.Image(f"{exp_name}/plots/selection_graph.png")
+    })
     
-        # Run decentralized federated learning
+    
+    # Run decentralized federated learning
     print("Starting decentralized federated learning...")
     results = run_decentralized_fl(
         **cfg['federation'],
@@ -120,6 +134,9 @@ def main(cfg: DictConfig):
     import json
     with open(f"{exp_name}/results.json", 'w') as f:
         json.dump(results, f, indent=4)
+    
+    # Close wandb run
+    wandb.finish()
     
     print(f"Training completed. Results saved to {exp_name}/results.json")
     

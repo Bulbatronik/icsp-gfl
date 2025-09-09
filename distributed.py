@@ -1,4 +1,5 @@
 import numpy as np
+import wandb
 
 
 def run_decentralized_fl(clients, rounds, rounds_patience):
@@ -68,6 +69,21 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         avg_loss = np.mean(train_losses)
         avg_acc = np.mean(test_accuracies)
         results.append({'round': round_num + 1, 'loss': avg_loss, 'accuracy': avg_acc})
+        
+        # Log metrics to wandb
+        metrics = {
+            'avg_loss': avg_loss,
+            'avg_accuracy': avg_acc,
+        }
+        
+        # Log individual client metrics
+        for client_id, loss in enumerate(train_losses):
+            metrics[f'client_{client_id}_loss'] = loss
+        
+        for client_id, acc in enumerate(test_accuracies):
+            metrics[f'client_{client_id}_accuracy'] = acc
+            
+        wandb.log(metrics, step=round_num+1)
         
         print(f"Round {round_num + 1}: Loss={avg_loss:.3f}, Accuracy={avg_acc:.1f}%")
 
