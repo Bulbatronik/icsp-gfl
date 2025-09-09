@@ -47,6 +47,7 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         for client_id, client in clients.items():
             # Each client selects neighbors to transmit its model to
             selected_neighbors = client.select_neighbors()
+            print(f"Client {client_id} selected neighbors: {selected_neighbors} from {client.neighbors}")
             transmission_log[client_id] = selected_neighbors
             
             # Transmit model to selected neighbors directly
