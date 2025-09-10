@@ -218,46 +218,6 @@ class DecentralizedClient:
         # Clear received models for next round
         self.received_models = {}
         
-        
-class SimpleMNISTModel(nn.Module):
-    """Lightweight CNN for MNIST"""
-    def __init__(self, device=None):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-        self.pool = nn.MaxPool2d(2)
-        self.fc1 = nn.Linear(32 * 7 * 7, 64)
-        self.fc2 = nn.Linear(64, 10)
-        
-        # Set device with better error handling
-        try:
-            if device is None:
-                self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            elif isinstance(device, str):
-                self.device = torch.device(device)
-                if self.device.type == 'cuda' and not torch.cuda.is_available():
-                    print("\033[93mWarning: CUDA requested for model but not available. Falling back to CPU.\033[0m")
-                    self.device = torch.device('cpu')
-            else:
-                self.device = device
-            self.to(self.device)
-        except Exception as e:
-            print(f"\033[91mError setting device for model: {e}. Falling back to CPU.\033[0m")
-            self.device = torch.device('cpu')
-            self.to(self.device)
-        
-    def forward(self, x):
-        # Move input to the device if it's not already there
-        if x.device != self.device:
-            x = x.to(self.device)
-            
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 32 * 7 * 7)
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)
-    
-    
 def constr_prob_matrix(clients):
     """Recover the transition probability matrix"""
     n = len(clients)

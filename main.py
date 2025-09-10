@@ -13,7 +13,8 @@ import wandb
 from topology import NetworkTopology
 from visualize import plot_topology, plot_selection_probability, plot_data_distribution, plot_transition_graph
 from partitioner import DataDistributor
-from client import DecentralizedClient, SimpleMNISTModel, constr_prob_matrix
+from models import load_model
+from client import DecentralizedClient, constr_prob_matrix
 from distributed import run_decentralized_fl
 from utils import set_seed, experiment_name
 print("Libraries imported")
@@ -81,7 +82,9 @@ def main(cfg: DictConfig):
     initial_visuals["data_distribution"] = wandb.Image(f"{exp_name}/plots/data_distribution.png")
     
     # Create clients
-    model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
+    #model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
+    model = load_model(cfg['client']['name'], device=device)
+    
     clients = {}
     for client_id in range(num_clients):
         loaders = data_distributor.client_loaders[client_id]
