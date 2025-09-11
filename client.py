@@ -79,7 +79,7 @@ class DecentralizedClient:
             # Convert kernel to similarity matrix
             similarity_matrix = heat_kernel
 
-        elif selection_method == 'spectr':
+        elif selection_method == 'spectrclust':
             # TODO: Check if correct
             L = csgraph.laplacian(A, normed=True)
             
@@ -106,6 +106,8 @@ class DecentralizedClient:
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
             elif selection_method == "nofed":
                 self.selection_ratio = 0.0 # No communication
+            else:
+                raise ValueError(f"Unknown selection method: {selection_method}")
             
         self.A_tilde = A * similarity_matrix
            
