@@ -1,0 +1,4 @@
+name: fmnist  # Options: mnist, cifar10
+partition: iid  # Options: iid, dirichlet
+batch_size: 64
+alpha: 1000 # For dirichlet
