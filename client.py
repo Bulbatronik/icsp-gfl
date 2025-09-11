@@ -106,6 +106,8 @@ class DecentralizedClient:
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
             elif selection_method == "nofed":
                 self.selection_ratio = 0.0 # No communication
+            elif selection_method == "random":
+                pass # Keep the selection ratio as is
             else:
                 raise ValueError(f"Unknown selection method: {selection_method}")
             
@@ -196,7 +198,7 @@ class DecentralizedClient:
         current_params = self.get_parameters()
         
         if not hasattr(self, 'received_models') or not self.received_models:
-            print("No aggregation is done.")
+            print("Keeping current model as the new one.")
             return  # No models received, keep current model
         
         # Get all received model parameters

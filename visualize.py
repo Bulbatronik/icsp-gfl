@@ -3,6 +3,7 @@ import os
 from collections import Counter
 from typing import Dict, Optional
 import networkx as nx
+import torch
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -243,7 +244,9 @@ class AdaptiveVisualizer:
         label_counts = np.zeros((num_clients, num_classes), dtype=int)
         
         for client_id in range(num_clients):
-            train_labels = [int(label) for label in client_data[client_id]['train_dataset'].dataset.targets[client_data[client_id]['train_indices']]]
+            targets = torch.tensor(client_data[client_id]['train_dataset'].dataset.targets)
+            train_labels = targets[client_data[client_id]['train_indices']].tolist()
+           #train_labels = [int(label) for label in client_data[client_id]['train_dataset'].dataset.targets[client_data[client_id]['train_indices']]]
             counts = Counter(train_labels)
             for label, count in counts.items():
                 label_counts[client_id, label] = count

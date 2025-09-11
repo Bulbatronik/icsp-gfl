@@ -8,14 +8,14 @@ which python3
 echo "=== Starting runs for all dataset and client configuration combinations ==="
 
 # Define arrays for different configuration types
-DATASETS=("mnist_iid" "mnist_niid")
-CLIENT_CONFIGS=("random" "broadcast")
+DATASETS=("cifar10_iid" "cifar10_niid")
+CLIENT_CONFIGS=("nofed" "random" "broadcast" "spect_eig3_cos")
 
 # Loop through all combinations
 for dataset in "${DATASETS[@]}"; do
     for client_config in "${CLIENT_CONFIGS[@]}"; do
         echo "Running with dataset=$dataset and client=$client_config"
-        python3 main.py dataset=$dataset client=$client_config
+        python3 main.py dataset=$dataset client=$client_config training=cifar10cnn
         
         # Check the exit status of the Python script
         if [ $? -ne 0 ]; then

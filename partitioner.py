@@ -28,6 +28,8 @@ class DataDistributor:
             train_dataset, test_dataset = self._load_mnist_data()
         elif self.name == 'cifar10':
             train_dataset, test_dataset = self._load_cifar10_data()
+        elif self.name == 'fmnist':
+            train_dataset, test_dataset = self._load_fashion_mnist_data()
         else:
             raise ValueError(f"Unsupported dataset: {self.name}. Supported: 'mnist', 'cifar10'")
         
@@ -91,6 +93,30 @@ class DataDistributor:
         
         return train_dataset, test_dataset
     
+    def _load_fashion_mnist_data(self, data_dir: str = './data') -> Tuple[Dataset, Dataset]:
+        """Load Fashion-MNIST dataset"""
+        # Data preprocessing
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.2860,), (0.3530,))  # Fashion-MNIST normalization
+        ])
+        
+        # Download and load Fashion-MNIST
+        train_dataset = datasets.FashionMNIST(
+            root=data_dir,
+            train=True,
+            download=True,
+            transform=transform
+        )
+        
+        test_dataset = datasets.FashionMNIST(
+            root=data_dir,
+            train=False,
+            download=True,
+            transform=transform
+        )
+        
+        return train_dataset, test_dataset
     
     def _distribute_iid_data(self, train_dataset, test_dataset, verbose=False) -> Dict[int, Dict]:
         """Distribute MNIST data in IID manner among clients"""

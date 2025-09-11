@@ -1,0 +1,4 @@
+name: cifar10  # Options: mnist, cifar10
+partition: dir  # Options: iid, dir
+batch_size: 64
+alpha: 0.3 # For dirichlet

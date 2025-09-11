@@ -83,8 +83,8 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         metrics['avg_accuracy'] = avg_acc
         # Log to wandb without specifying step to ensure monotonically increasing steps
         wandb.log(metrics)
-        
-        print(f"Round {round_num + 1}: Loss={avg_loss:.3f}, Accuracy={avg_acc:.1f}%")
+
+        print(f"Round {round_num + 1}/{rounds}: Loss={avg_loss:.3f}, Accuracy={avg_acc:.1f}%")
 
         # Early stopping based on accuracy
         if avg_acc > best_test_acc:
