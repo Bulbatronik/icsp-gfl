@@ -1,2 +1,2 @@
-rounds: 2
-rounds_patience: 5
+rounds: 50
+rounds_patience: 10
