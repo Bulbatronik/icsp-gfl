@@ -1,15 +1,11 @@
 # Import necessary libraries for decentralized federated learning simulation
 import hydra # Import hydra for configuration management
 from omegaconf import DictConfig, OmegaConf
-
 import os
 import torch
 from copy import deepcopy
 import warnings
-warnings.filterwarnings('ignore')
-
 import wandb
-
 from topology import NetworkTopology
 from visualize import plot_topology, plot_selection_probability, plot_data_distribution, plot_transition_graph
 from partitioner import DataDistributor
@@ -17,14 +13,14 @@ from models import load_model
 from client import DecentralizedClient, constr_prob_matrix
 from distributed import run_decentralized_fl
 from utils import set_seed, experiment_name
+
+warnings.filterwarnings('ignore')
 print("Libraries imported")
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(cfg: DictConfig):
     set_seed(cfg['seed'])
-    
-    print("Configuration:\n", OmegaConf.to_yaml(cfg))
     
     # Check if device is specified in client config, default to CUDA if available
     requested_device = cfg['federation'].get('device', 'cuda')
@@ -34,7 +30,6 @@ def main(cfg: DictConfig):
     else:
         device = torch.device(requested_device)
     
-    print(f"Using device: {device}")
     
     # Clear cuda cache if using CUDA
     if device.type == 'cuda':
@@ -47,6 +42,9 @@ def main(cfg: DictConfig):
         # Don't specify entity to use default personal space
         config=OmegaConf.to_container(cfg)
     )
+    
+    print("Configuration:\n", OmegaConf.to_yaml(cfg))
+    print(f"Using device: {device}")
     
     # Set the topology
     network = NetworkTopology(**cfg['network'])

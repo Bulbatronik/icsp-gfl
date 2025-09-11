@@ -72,18 +72,17 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         results.append({'round': round_num + 1, 'loss': avg_loss, 'accuracy': avg_acc})
         
         # Log metrics to wandb
+        metrics = {}
+        # Log individual client metrics
+        for client_id, loss in enumerate(train_losses):
+            metrics[f'client_{client_id}_loss'] = loss
+        for client_id, acc in enumerate(test_accuracies):
+            metrics[f'client_{client_id}_accuracy'] = acc
+        # Log aggregated metrics
         metrics = {
             'avg_loss': avg_loss,
             'avg_accuracy': avg_acc,
         }
-        
-        # Log individual client metrics
-        for client_id, loss in enumerate(train_losses):
-            metrics[f'client_{client_id}_loss'] = loss
-        
-        for client_id, acc in enumerate(test_accuracies):
-            metrics[f'client_{client_id}_accuracy'] = acc
-            
         # Log to wandb without specifying step to ensure monotonically increasing steps
         wandb.log(metrics)
         
