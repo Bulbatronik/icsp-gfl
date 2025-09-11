@@ -56,15 +56,15 @@ def experiment_name(cfg):
     federation_part += "_"
     federation_part += f"pat-{cfg['federation']['rounds_patience']}"
     
-    client_part = f"M-{cfg['client']['architecture']}"
+    client_part = f"M-{cfg['training']['architecture']}"
     client_part += "_"
-    client_part += f"O-{cfg['client']['optimizer']}"
+    client_part += f"O-{cfg['training']['optimizer']}"
     client_part += "_"
-    client_part += f"lr-{cfg['client']['lr']}"
+    client_part += f"lr-{cfg['training']['lr']}"
     client_part += "_"
     client_part += f"E-{cfg['dataset']['batch_size']}"
     client_part += "_"
-    client_part += f"rho-{cfg['client']['rho']}"
+    client_part += f"rho-{cfg['training']['rho']}"
     
     name_parts = [
         topology_part,

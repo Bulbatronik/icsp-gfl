@@ -4,6 +4,7 @@ defaults:
   - dataset: mnist_iid
   - network: random10
   - client: random
+  - training: mnistcnn
 
 seed: 42
 

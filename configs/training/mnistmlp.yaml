@@ -1,0 +1,5 @@
+architecture: mnistMLP # NOTE: Not used for now
+lr: 0.01
+epochs: 5
+optimizer: SGD  # Options: SGD, Adam
+rho: 1.0 # mixing parameter for model update (1-rho)*own + rho*received_avg

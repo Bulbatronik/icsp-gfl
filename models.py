@@ -20,7 +20,9 @@ class MNIST_mlp(nn.Module):
         super().__init__()
         self.flat = nn.Flatten()
         self.fc1 = nn.Linear(28 * 28, 200)
+        self.relu1 = nn.ReLU()
         self.fc2 = nn.Linear(200, 200)
+        self.relu2 = nn.ReLU()
         self.fc3 = nn.Linear(200, 10)
         
         # Set device with better error handling
@@ -45,8 +47,8 @@ class MNIST_mlp(nn.Module):
         if x.device != self.device:
             x = x.to(self.device)
         x = self.flat(x)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.relu1(self.fc1(x))
+        x = self.relu2(self.fc2(x))
         return self.fc3(x)
 
 class MNIST_cnn(nn.Module):
@@ -54,9 +56,13 @@ class MNIST_cnn(nn.Module):
     def __init__(self, device=None):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 32, 5, padding=0)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(32, 64, 5, padding=0)
-        self.pool = nn.MaxPool2d(2)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(2)
         self.fc1 = nn.Linear(64 * 4 * 4, 512)
+        self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(512, 10)
         
         # Set device with better error handling
@@ -81,10 +87,10 @@ class MNIST_cnn(nn.Module):
         if x.device != self.device:
             x = x.to(self.device)
             
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool1(self.relu1(self.conv1(x)))
+        x = self.pool2(self.relu2(self.conv2(x)))
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
+        x = self.relu3(self.fc1(x))
         return self.fc2(x)
     
     
@@ -93,9 +99,13 @@ class CIFAR10_cnn(nn.Module):
     def __init__(self, device=None):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=0)
-        self.pool = nn.MaxPool2d(2)
+        self.relu1 = nn.ReLU()
+        self.pool1 = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=0)
+        self.relu2 = nn.ReLU()
+        self.pool2 = nn.MaxPool2d(2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, padding=0)
+        self.relu3 = nn.ReLU()
         self.fc = nn.Linear(64 * 4 * 4, 10)
         # Set device with better error handling
         try:
@@ -119,8 +129,8 @@ class CIFAR10_cnn(nn.Module):
         if x.device != self.device:
             x = x.to(self.device)
             
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = F.relu(self.conv3(x))
+        x = self.pool1(self.relu1(self.conv1(x)))
+        x = self.pool2(self.relu2(self.conv2(x)))
+        x = self.relu3(self.conv3(x))
         x = x.view(x.size(0), -1)
         return self.fc(x)

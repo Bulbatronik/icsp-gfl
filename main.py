@@ -81,13 +81,14 @@ def main(cfg: DictConfig):
     
     # Create clients
     #model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
-    model = load_model(cfg['client']['name'], device=device)
+    model = load_model(cfg['training']['architecture'], device=device)
     
     clients = {}
     for client_id in range(num_clients):
         loaders = data_distributor.client_loaders[client_id]
         clients[client_id] = DecentralizedClient(
             **cfg['client'],
+            **cfg['training'],
             client_id=client_id, 
             graph=network.G,
             model=deepcopy(model),

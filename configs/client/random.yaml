@@ -1,11 +1,5 @@
-architecture: mnistCNN # NOTE: Not used for now
-lr: 0.01
-epochs: 5
-optimizer: SGD  # Options: SGD, Adam
-rho: 1.0 # mixing parameter for model update (1-rho)*own + rho*received_avg
-selection_ratio: 0.5 # Ratio of neighbors selected
-
 selection_method: random # Options: random, broadcast, heatkernel, spectrclust
+selection_ratio: 0.5 # Ratio of neighbors selected
 dist: cosine # Options: eucl, cosine 
 num_eig: 3 # Numeber of eigenvalues to consider (<= num_clients)
 t: 40 # Diffusion time, small = local, large = global
