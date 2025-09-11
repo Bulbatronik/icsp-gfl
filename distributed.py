@@ -79,10 +79,8 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         for client_id, acc in enumerate(test_accuracies):
             metrics[f'client_{client_id}_accuracy'] = acc
         # Log aggregated metrics
-        metrics = {
-            'avg_loss': avg_loss,
-            'avg_accuracy': avg_acc,
-        }
+        metrics['avg_loss'] = avg_loss
+        metrics['avg_accuracy'] = avg_acc
         # Log to wandb without specifying step to ensure monotonically increasing steps
         wandb.log(metrics)
         
@@ -97,4 +95,6 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
             if patience >= rounds_patience:
                 print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy.")
                 break
+            
+        # Log the best 
     return results

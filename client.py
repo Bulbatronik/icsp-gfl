@@ -104,6 +104,8 @@ class DecentralizedClient:
             similarity_matrix = A # Default to adjacency if unknown method
             if selection_method == "broadcast":
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
+            elif selection_method == "nofed":
+                self.selection_ratio = 0.0 # No communication
             
         self.A_tilde = A * similarity_matrix
            
@@ -168,8 +170,6 @@ class DecentralizedClient:
         return np.random.choice(self.neighbors, ceil(len(self.neighbors) * self.selection_ratio), 
                          replace=False, p=self.neighbors_proba)
         
-    
-    
     def transmit_to_selected(self, selected_neighbors, all_clients):
         """Transmit model parameters to selected neighbors"""
         my_params = self.get_parameters()
@@ -194,6 +194,7 @@ class DecentralizedClient:
         current_params = self.get_parameters()
         
         if not hasattr(self, 'received_models') or not self.received_models:
+            print("No aggregation is done.")
             return  # No models received, keep current model
         
         # Get all received model parameters
