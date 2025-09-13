@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import eigh  # for eigen-decomposition
 from scipy.sparse import csgraph
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+from tqdm import tqdm
 
 
 class DecentralizedClient:
@@ -123,8 +124,10 @@ class DecentralizedClient:
     def train_local(self):
         """Train locally on client data"""
         self.model.train()
-        total_loss = 0
-        for _ in range(self.epochs):
+        
+        epochs_iter = tqdm(range(self.epochs))
+        for _ in epochs_iter:
+            total_loss = 0
             for data, target in self.train_loader:
                 # Move data to device
                 data, target = data.to(self.device), target.to(self.device)
@@ -135,23 +138,32 @@ class DecentralizedClient:
                 loss.backward()
                 self.optimizer.step()
                 total_loss += loss.item()
-        return total_loss / len(self.train_loader)
+            
+            epoch_loss = total_loss / len(self.train_loader)
+            # Update tqdm with current loss
+            epochs_iter.set_postfix(loss=f"{epoch_loss:.4f}")
+        
+        return epoch_loss  # Return only the last epoch's loss
     
     def evaluate(self):
         """Evaluate on test data"""
         self.model.eval()
-        correct = 0
-        total = 0
+        correct, total = 0, 0
+        total_loss = 0
         with torch.no_grad():
             for data, target in self.test_loader:
                 # Move data to device
                 data, target = data.to(self.device), target.to(self.device)
                 
                 output = self.model(data)
+                loss = self.criterion(output, target)
+                
                 pred = output.argmax(dim=1)
                 correct += pred.eq(target).sum().item()
                 total += target.size(0)
-        return 100. * correct / total
+                
+                total_loss += loss.item()
+        return 100. * correct / total, total_loss / len(self.test_loader)
     
     def get_parameters(self):
         """Get model parameters"""

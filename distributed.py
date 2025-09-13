@@ -28,6 +28,7 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
     results = []
     patience = 0
     best_test_acc = float('-inf')
+    best_test_loss = float('+inf')
     
     for round_num in range(rounds):
         # Patience for early stopping
@@ -60,16 +61,19 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
             client.aggregate_received_models()
         
         # Evaluate all clients
-        test_accuracies = []
+        test_accuracies, test_losses = [], []
         for client_id, client in clients.items():
             print(f"Client {client_id} evaluating...")
-            acc = client.evaluate()
+            acc, loss = client.evaluate()
             test_accuracies.append(acc)
-        
+            test_losses.append(loss)    
+               
         # Store round results
-        avg_loss = np.mean(train_losses)
-        avg_acc = np.mean(test_accuracies)
-        results.append({'round': round_num + 1, 'loss': avg_loss, 'accuracy': avg_acc})
+        avg_train_loss = np.mean(train_losses)
+        avg_test_loss = np.mean(test_losses)
+        avg_test_acc = np.mean(test_accuracies)
+        
+        results.append({'round': round_num + 1, 'train_loss': avg_train_loss, 'test_loss': avg_test_loss, 'test_accuracy': avg_test_acc})
         
         # Log metrics to wandb
         metrics = {}
@@ -79,22 +83,34 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         for client_id, acc in enumerate(test_accuracies):
             metrics[f'client_{client_id}_accuracy'] = acc
         # Log aggregated metrics
-        metrics['avg_loss'] = avg_loss
-        metrics['avg_accuracy'] = avg_acc
+        metrics['avg_train_loss'] = avg_train_loss
+        metrics['avg_test_accuracy'] = avg_test_acc
+        metrics['avg_test_loss'] = avg_test_loss
+        metrics['min_train_loss'] = max(train_losses)
+        metrics['min_test_loss'] = min(test_losses)
+        metrics['max_test_accuracy'] = max(test_accuracies)
+        
         # Log to wandb without specifying step to ensure monotonically increasing steps
         wandb.log(metrics)
 
-        print(f"Round {round_num + 1}/{rounds}: Loss={avg_loss:.3f}, Accuracy={avg_acc:.1f}%")
+        print(f"Round {round_num + 1}/{rounds}: Train Loss={avg_train_loss:.3f}, Test Loss={avg_test_loss:.3f}, Test Accuracy={avg_test_acc:.1f}%")
 
         # Early stopping based on accuracy
-        if avg_acc > best_test_acc:
-            best_test_acc = avg_acc
+        if avg_test_acc > best_test_acc:
+            best_test_acc = avg_test_acc
             patience = 0
         else:
             patience += 1
             if patience >= rounds_patience:
                 print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy.")
                 break
-            
-        # Log the best 
+        
+        # Store best loss
+        if avg_test_loss < best_test_loss:
+            best_test_loss = avg_test_loss        
+        
+        # Store best metrics
+        metrics['best_test_loss'] = best_test_loss
+        metrics['best_test_accuracy'] = best_test_acc
+        # Log the best
     return results

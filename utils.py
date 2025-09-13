@@ -64,7 +64,7 @@ def experiment_name(cfg):
     client_part += "_"
     client_part += f"E-{cfg['training']['epochs']}"
     client_part += "_"
-    client_part += f"B{cfg['dataset']['batch_size']}"
+    client_part += f"B-{cfg['dataset']['batch_size']}"
     client_part += "_"
     client_part += f"rho-{cfg['training']['rho']}"
     
