@@ -36,9 +36,12 @@ def main(cfg: DictConfig):
         torch.cuda.empty_cache()
     
     
+    # Group name = Dataset + Topology + Partitioning
+    group_name = f"{cfg['dataset']['name']}_{cfg['network']['topology']}_{cfg['dataset']['partition']}"
     run = wandb.init(
         project="decentralized-federated-learning",
         name=experiment_name(cfg),
+        group=group_name,    
         # Don't specify entity to use default personal space
         config=OmegaConf.to_container(cfg)
     )
@@ -58,9 +61,8 @@ def main(cfg: DictConfig):
     exp_name = f"results/{experiment_name(cfg)}"
     os.makedirs(exp_name, exist_ok=True)
     
-
-    #info = network.get_topology_info()
-    #print("Topology info:\n", OmegaConf.to_yaml(info))
+    info = network.get_topology_info()
+    print("Topology info:\n", OmegaConf.to_yaml(info))
     pos = plot_topology(network.G, save_folder=exp_name, file_name='original_topology') # Store the positions of the nodes for better visualization
     
     # Create a dictionary to collect all initial visualizations
@@ -72,15 +74,14 @@ def main(cfg: DictConfig):
     # Prepare the dataset
     data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients, verbose=False)
     data_distributor.load_and_distribute()
-    #summary = data_distributor.get_data_summary()
-    #print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
+    summary = data_distributor.get_data_summary()
+    print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
     plot_data_distribution(data_distributor.client_data, save_folder=exp_name, file_name='data_distribution')
     
     # Add the data distribution figure to the collection
     initial_visuals["data_distribution"] = wandb.Image(f"{exp_name}/plots/data_distribution.png")
     
     # Create clients
-    #model = SimpleMNISTModel(device=device) # TODO: ADD MODEL SELECTION
     model = load_model(cfg['training']['architecture'], device=device)
     
     clients = {}

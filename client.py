@@ -64,28 +64,43 @@ class DecentralizedClient:
         
         # 1. Heat kernel
         if selection_method == 'heatkernel':
-            # TODO: Check if correct
             L = csgraph.laplacian(A, normed=False)  # unnormalized Laplacian
 
             # Compute first k eigenvectors/eigenvalues
             eigvals, eigvecs = eigh(L)  # L is symmetric, returns sorted eigenvalues
-
+            
+            if self.client_id == 0:
+                print(f"Eigenvalues of L: {eigvals} ")
+           
             # Keep first k eigenvectors (excluding the zero eigenvalue if desired)
-            eigvals = eigvals[1:num_eig+1] # skip first trivial eigenvalue 0
-            eigvecs = eigvecs[:, 1:num_eig+1]
-
+            #eigvals = eigvals[1:num_eig+1] # skip first trivial eigenvalue 0
+            #eigvecs = eigvecs[:, 1:num_eig+1]
+            eigvals = eigvals[:num_eig]
+            eigvecs = eigvecs[:, :num_eig]
+            
             # Heat/diffusion kernel
             heat_kernel = eigvecs @ np.diag(np.exp(-self.t * eigvals)) @ eigvecs.T
 
-            # Convert kernel to similarity matrix
+            # OPT1: Convert kernel to similarity matrix
             similarity_matrix = heat_kernel
 
+            # OPT2: cossim(i, j) = K(i, j) / sqrt(K(i, i) * K(j, j))
+            #norms = np.sqrt(np.diag(heat_kernel))
+            #similarity_matrix = heat_kernel / np.outer(norms, norms)
+            
+            # OPT3: diff dist D(i, j)^2 = K(i, i) + K(j, j) - 2K(i, j)
+            #distances = np.sqrt(np.maximum(0, np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel))
+            
+            
         elif selection_method == 'spectrclust':
-            # TODO: Check if correct
             L = csgraph.laplacian(A, normed=True)
             
             # Compute first k eigenvectors/eigenvalues
             eigvals, eigvecs = eigh(L)  # L is symmetric, returns sorted eigenvalues
+            
+            if self.client_id == 0:
+                print(f"Eigenvalues of L: {eigvals} ")
+            
             # Normalize the eigenvectors
             eigvecs = eigvecs / np.linalg.norm(eigvecs, axis=1, keepdims=True)
             
