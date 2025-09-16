@@ -72,10 +72,10 @@ class DecentralizedClient:
                 print(f"Eigenvalues of L: {eigvals} ")
            
             # Keep first k eigenvectors (excluding the zero eigenvalue if desired)
-            #eigvals = eigvals[1:num_eig+1] # skip first trivial eigenvalue 0
-            #eigvecs = eigvecs[:, 1:num_eig+1]
-            eigvals = eigvals[:num_eig]
-            eigvecs = eigvecs[:, :num_eig]
+            eigvals = eigvals[1:num_eig+1] # skip first trivial eigenvalue 0
+            eigvecs = eigvecs[:, 1:num_eig+1]
+            #eigvals = #eigvals[:num_eig]
+            #eigvecs = #eigvecs[:, :num_eig]
             
             # Heat/diffusion kernel
             heat_kernel = eigvecs @ np.diag(np.exp(-self.t * eigvals)) @ eigvecs.T
@@ -89,8 +89,6 @@ class DecentralizedClient:
             
             # OPT3: diff dist D(i, j)^2 = K(i, i) + K(j, j) - 2K(i, j)
             #distances = np.sqrt(np.maximum(0, np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel))
-            
-            
         elif selection_method == 'spectrclust':
             L = csgraph.laplacian(A, normed=True)
             

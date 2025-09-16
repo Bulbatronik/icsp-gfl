@@ -43,6 +43,8 @@ class NetworkTopology:
             self.G = self._karate_graph()
         elif self.topology == "floorent":
             self.G = self._florentine_families()
+        elif self.topology == "small":
+            self.G = self._create_small_graph() # 8 NODES
         else:
             raise ValueError(f"Unknown topology type: {self.topology}")
 
@@ -51,6 +53,14 @@ class NetworkTopology:
         mapping = {node: i for i, node in enumerate(G.nodes())}
         G = nx.relabel_nodes(G, mapping)
         return G
+    
+    def _create_small_graph(self) -> nx.Graph:
+        # Node 0 connected to node 4
+        G = nx.Graph()
+        G.add_edges_from([(0, 7), (0, 4), (0, 1), (1, 7), (1, 5), (1, 3), (1, 2), (2, 3), (3, 7), (3, 6), (5, 6)])
+        nx.set_node_attributes(G, {i: f"Client_{i}" for i in range(self.num_clients)}, 'name')
+        return G
+                                           
     
     def _create_ring_topology(self) -> nx.Graph:
         """Create a ring topology where each client connects to its neighbors"""
