@@ -9,7 +9,7 @@ echo "=== Starting runs for all dataset and client configuration combinations ==
 
 # Define arrays for different configuration types
 DATASETS=("fmnist_iid" "fmnist_niid")
-CLIENT_CONFIGS=("random" "spect_eig3_cos" "heatkernel")
+CLIENT_CONFIGS=("random" "spect_eig3_cos") # "heatkernel")
 SEEDS=("42" "43" "44")
 # Loop through all combinations
 for seed in "${SEEDS[@]}"; do

@@ -8,7 +8,7 @@ which python3
 echo "=== Starting runs for all dataset and client configuration combinations ==="
 
 # Define arrays for different configuration types
-DATASETS=("mnist_iid" "mnist_niid")
+DATASETS=("fmnist_iid" "fmnist_niid")
 CLIENT_CONFIGS=("nofed" "broadcast")
 SEEDS=("42" "43" "44")
 # Loop through all combinations
