@@ -54,7 +54,9 @@ def experiment_name(cfg):
         
     federation_part = f"R-{cfg['federation']['rounds']}"
     federation_part += "_"
-    federation_part += f"pat-{cfg['federation']['rounds_patience']}"
+    federation_part += f"patA-{cfg['federation']['rounds_patience_acc']}"
+    federation_part += "_"
+    federation_part += f"patL-{cfg['federation']['rounds_patience_loss']}"
     
     client_part = f"M-{cfg['training']['architecture']}"
     client_part += "_"

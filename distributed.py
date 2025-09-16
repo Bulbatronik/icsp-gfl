@@ -2,7 +2,7 @@ import numpy as np
 import wandb
 
 
-def run_decentralized_fl(clients, rounds, rounds_patience):
+def run_decentralized_fl(clients, rounds, rounds_patience_acc, rounds_patience_loss):
     """Main decentralized FL simulation with 3-phase communication"""
     print(f"Selection: {clients[0].selection_method} ({clients[0].selection_ratio*100:.0f}% of neighbors)")
     
@@ -26,15 +26,13 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
     
     # Training rounds
     results = []
-    patience = 0
+    patience_acc = 0
+    patience_loss = 0
     best_test_acc = float('-inf')
     best_test_loss = float('+inf')
     
     for round_num in range(rounds):
-        # Patience for early stopping
-        if patience >= rounds_patience:
-            print(f"Early stopping at round {round_num} due to no improvement in accuracy.")
-            break
+        # No early stopping check here - we'll do it after evaluating
         
         # Phase 1: Each client trains locally
         train_losses = []
@@ -98,16 +96,22 @@ def run_decentralized_fl(clients, rounds, rounds_patience):
         # Early stopping based on accuracy
         if avg_test_acc > best_test_acc:
             best_test_acc = avg_test_acc
-            patience = 0
+            patience_acc = 0
         else:
-            patience += 1
-            if patience >= rounds_patience:
-                print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy.")
+            patience_acc += 1
+            if patience_acc >= rounds_patience_acc:
+                print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy for {rounds_patience_acc} rounds.")
                 break
         
-        # Store best loss
+        # Early stopping based on loss
         if avg_test_loss < best_test_loss:
-            best_test_loss = avg_test_loss        
+            best_test_loss = avg_test_loss
+            patience_loss = 0
+        else:
+            patience_loss += 1
+            if patience_loss >= rounds_patience_loss:
+                print(f"Early stopping at round {round_num + 1} due to no improvement in loss for {rounds_patience_loss} rounds.")
+                break
         
         # Store best metrics
         metrics['best_test_loss'] = best_test_loss

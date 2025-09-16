@@ -1,2 +1,3 @@
 rounds: 100
-rounds_patience: 10
+rounds_patience_acc: 10
+rounds_patience_loss: 15
