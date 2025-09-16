@@ -9,7 +9,7 @@ echo "=== Starting runs for all dataset and client configuration combinations ==
 
 # Define arrays for different configuration types
 DATASETS=("fmnist_niid") #("fmnist_iid" )
-CLIENT_CONFIGS=("nofed" "broadcast") # "heatkernel")
+CLIENT_CONFIGS=("nofed" "broadcast")
 SEEDS=("42") # "43") # "44")
 # Loop through all combinations
 for seed in "${SEEDS[@]}"; do
@@ -17,7 +17,7 @@ for seed in "${SEEDS[@]}"; do
     for dataset in "${DATASETS[@]}"; do
         for client_config in "${CLIENT_CONFIGS[@]}"; do
             echo "Running with dataset=$dataset and client=$client_config"
-            python3 main.py dataset=$dataset client=$client_config training=mnistcnn seed=$seed network=small client.num_eig=3 client.t=0.1
+            python3 main.py dataset=$dataset client=$client_config training=mnistcnn seed=$seed network=small
             
             # Check the exit status of the Python script
             if [ $? -ne 0 ]; then
