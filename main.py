@@ -100,13 +100,13 @@ def main(cfg: DictConfig):
     #print(clients)
     
     # Check the probabilities # REMOVE LATER
-    #for client_id, client in clients.items():
-    #    print(f"Client {client_id} neighbors: {list(client.neighbors)}, similarities: {client.neighbors_sim}, probabilities: {client.neighbors_proba}")
-    #    # Select some clients
-    #    selected = client.select_neighbors()
-    #    print(f"Client {client_id} selected neighbors: {selected}")
-    #    selected = client.select_neighbors()
-    #    print(f"Client {client_id} selected neighbors: {selected}")
+    for client_id, client in clients.items():
+        print(f"Client {client_id} neighbors: {list(client.neighbors)}, similarities: {client.neighbors_sim}, probabilities: {client.neighbors_proba}")
+        # Select some clients
+        #selected = client.select_neighbors()
+        #print(f"Client {client_id} selected neighbors: {selected}")
+        #selected = client.select_neighbors()
+        #print(f"Client {client_id} selected neighbors: {selected}")
     
     # Plot the new topology with weights
     plot_topology(network.G, Adj=clients[0].A_tilde, pos=pos, save_folder=exp_name, file_name='weighted_topology')
