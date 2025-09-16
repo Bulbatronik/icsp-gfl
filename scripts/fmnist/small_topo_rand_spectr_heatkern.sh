@@ -17,7 +17,7 @@ for seed in "${SEEDS[@]}"; do
     for dataset in "${DATASETS[@]}"; do
         for client_config in "${CLIENT_CONFIGS[@]}"; do
             echo "Running with dataset=$dataset and client=$client_config"
-            python3 main.py dataset=$dataset client=$client_config training=mnistcnn seed=$seed network=small client.num_eig=3 client.t=0.1
+            python3 main.py dataset=$dataset client=$client_config training=mnistcnn seed=$seed network=small client.num_eig=3 client.t=0.01
             
             # Check the exit status of the Python script
             if [ $? -ne 0 ]; then

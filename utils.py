@@ -39,6 +39,8 @@ def experiment_name(cfg):
             selection_part += f"dist-{cfg['client']['dist']}"
             selection_part += "_"
         elif cfg['client']['selection_method'] == "heatkernel":
+            selection_part += f"Neig-{cfg['client']['num_eig']}"
+            selection_part += "_"
             selection_part += f"t-{cfg['client']['t']}"
             selection_part += "_"
         selection_part += f"ratio-{cfg['client']['selection_ratio']}"

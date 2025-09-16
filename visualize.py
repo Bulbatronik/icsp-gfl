@@ -171,20 +171,19 @@ class AdaptiveVisualizer:
             if Adj.shape[0] != num_nodes or Adj.shape[1] != num_nodes:
                 raise ValueError("Adjacency matrix dimensions must match the number of nodes in the graph")
                 
-            # Map node labels to indices if needed
-            node_to_idx = {node: i for i, node in enumerate(G.nodes())}
+            # Ensure node order consistency with adjacency matrix
+            # We assume Adj is indexed by node IDs in sequential order (0, 1, 2, ...)
+            nodes = sorted(G.nodes())  # Sort to ensure consistent order
             
             # Extract edge weights from the adjacency matrix
             weighted_edges = []
             weights = []
             
-            for u in G.nodes():
-                for v in G.nodes():
-                    u_idx = node_to_idx[u]
-                    v_idx = node_to_idx[v]
-                    if Adj[u_idx, v_idx] != 0:
+            for i, u in enumerate(nodes):
+                for j, v in enumerate(nodes):
+                    if Adj[i, j] != 0:
                         weighted_edges.append((u, v))
-                        weights.append(Adj[u_idx, v_idx])
+                        weights.append(Adj[i, j])
         
             if weighted_edges:
                 # Normalize weights for colormap
