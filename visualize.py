@@ -163,14 +163,30 @@ class AdaptiveVisualizer:
             pos = self._get_best_layout(G, layout_type)
         
         if Adj is not None:
-            # Draw weighted edges
-            G_weighted = nx.from_numpy_array(Adj)
+            # Instead of creating a new graph, use the adjacency matrix directly
+            # to color the edges while preserving the original graph structure
+            num_nodes = G.number_of_nodes()
             
-            # Get edge weights
-            edge_attrs = nx.get_edge_attributes(G_weighted, 'weight')
-            if edge_attrs:
-                edges, weights = zip(*edge_attrs.items())
+            # Ensure the adjacency matrix matches the graph size
+            if Adj.shape[0] != num_nodes or Adj.shape[1] != num_nodes:
+                raise ValueError("Adjacency matrix dimensions must match the number of nodes in the graph")
                 
+            # Map node labels to indices if needed
+            node_to_idx = {node: i for i, node in enumerate(G.nodes())}
+            
+            # Extract edge weights from the adjacency matrix
+            weighted_edges = []
+            weights = []
+            
+            for u in G.nodes():
+                for v in G.nodes():
+                    u_idx = node_to_idx[u]
+                    v_idx = node_to_idx[v]
+                    if Adj[u_idx, v_idx] != 0:
+                        weighted_edges.append((u, v))
+                        weights.append(Adj[u_idx, v_idx])
+        
+            if weighted_edges:
                 # Normalize weights for colormap
                 if len(set(weights)) > 1:
                     norm = plt.Normalize(vmin=min(weights), vmax=max(weights))
@@ -180,9 +196,9 @@ class AdaptiveVisualizer:
                 edge_colors = [self.edge_cmap(norm(w)) for w in weights]
                 
                 # Draw edges with weights
-                for (i, j), w, color in zip(edges, weights, edge_colors):
-                    x0, y0 = pos[i]
-                    x1, y1 = pos[j]
+                for (u, v), w, color in zip(weighted_edges, weights, edge_colors):
+                    x0, y0 = pos[u]
+                    x1, y1 = pos[v]
                     plt.plot([x0, x1], [y0, y1], color=color, linewidth=settings['edge_width'], alpha=settings['edge_alpha'])
                     
                     # Only show weight labels if there are few nodes and the font is readable
@@ -200,7 +216,7 @@ class AdaptiveVisualizer:
                                 ha='center', va='center', 
                                 bbox=bbox_props)
             else:
-                # If weights don't exist, draw normal edges
+                # If no weighted edges, draw normal edges
                 nx.draw_networkx_edges(G, pos, edge_color=self.edge_color_scheme, 
                                     width=settings['edge_width'], alpha=settings['edge_alpha'])
         else:
@@ -449,7 +465,7 @@ class AdaptiveVisualizer:
         self.transition_cmap = plt.get_cmap(transition_cmap)
         
 # For backward compatibility, create wrapper functions
-def plot_topology(G: nx.Graph, layout_type: str = 'auto', Adj: np.ndarray = None, 
+def plot_topology(G: nx.Graph, layout_type: str = 'auto', Adj: Optional[np.ndarray] = None, 
                  pos: Optional[Dict] = None, save_folder: str = './', file_name: str = 'original_topology') -> Dict:
     """Plot a network topology using adaptive settings"""
     visualizer = AdaptiveVisualizer(save_folder)

@@ -1,5 +1,6 @@
 from torch import nn, optim
 import torch
+from copy import deepcopy
 from math import ceil
 import networkx as nx
 import numpy as np
@@ -58,9 +59,10 @@ class DecentralizedClient:
         self.rho = rho
         
         # Graph-based neighbors selection if 'selection_method' != random (or broadcast)
-        A = nx.adjacency_matrix(self.graph).toarray()
+        A = nx.adjacency_matrix(self.graph, nodelist=range(graph.number_of_nodes())).toarray()
         #self.similarity_matrix = A
-        
+        if self.client_id == 0:
+            print(A)
         # 1. Heat kernel
         if selection_method == 'heatkernel':
             L = csgraph.laplacian(A, normed=False)  # unnormalized Laplacian
@@ -114,24 +116,36 @@ class DecentralizedClient:
             else:
                 raise ValueError(f"Unknown distance metric: {dist}")                     
         else:
-            similarity_matrix = A # Default to adjacency if unknown method
+            similarity_matrix = deepcopy(A) # Default to adjacency if unknown method
+            if self.client_id == 0:
+                print("Sim mtrx")
+                print(similarity_matrix)
+            
             if selection_method == "broadcast":
                 self.selection_ratio = 1.0 # Broadcast to all neighbors
             elif selection_method == "nofed":
                 self.selection_ratio = 0.0 # No communication
             elif selection_method == "random":
-                pass # Keep the selection ratio as is
+                self.selection_ratio = selection_ratio
             else:
                 raise ValueError(f"Unknown selection method: {selection_method}")
             
-        self.A_tilde = A * similarity_matrix
-           
+        self.A_tilde = np.multiply(A, similarity_matrix)
+        if self.client_id == 0:
+            print("A_tilde")
+            print(self.A_tilde)
         # Store the similarity between the nodes
         self.neighbors_sim = [similarity_matrix[client_id, nbr] for nbr in self.neighbors]
-        # Compute probabilities (similarities can be negative)
         
-        #self.neighbors_proba = self.neighbors_sim / np.sum(self.neighbors_sim) # TODO: MB Softmax
+        # Compute probabilities (similarities can be negative)
+        # Apply softmax for other methods
         self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
+        #if selection_method in ["random", "nofed", "broadcast"] or (len(set(self.neighbors_sim)) == 1 and self.neighbors):
+        #    # Use uniform distribution for random methods or when all similarities are equal
+        #    self.neighbors_proba = np.ones(len(self.neighbors)) / len(self.neighbors) if self.neighbors else np.array([])
+        #else:
+        #    # Apply softmax for other methods
+        #    self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
         
     def train_local(self):
         """Train locally on client data"""
