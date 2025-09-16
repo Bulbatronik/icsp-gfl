@@ -1,5 +1,4 @@
 from torch import nn, optim
-import torch.nn.functional as F
 import torch
 from math import ceil
 import networkx as nx

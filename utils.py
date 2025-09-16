@@ -33,7 +33,7 @@ def experiment_name(cfg):
     else:
         selection_part = f"select-{cfg['client']['selection_method']}"
         selection_part += "_"
-        if cfg['client']['selection_method'] == "spectr":
+        if cfg['client']['selection_method'] == "spectrclust":
             selection_part += f"Neig-{cfg['client']['num_eig']}"
             selection_part += "_"
             selection_part += f"dist-{cfg['client']['dist']}"

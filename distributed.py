@@ -88,33 +88,37 @@ def run_decentralized_fl(clients, rounds, rounds_patience_acc, rounds_patience_l
         metrics['min_test_loss'] = min(test_losses)
         metrics['max_test_accuracy'] = max(test_accuracies)
         
-        # Log to wandb without specifying step to ensure monotonically increasing steps
-        wandb.log(metrics)
+        
 
         print(f"Round {round_num + 1}/{rounds}: Train Loss={avg_train_loss:.3f}, Test Loss={avg_test_loss:.3f}, Test Accuracy={avg_test_acc:.1f}%")
 
         # Early stopping based on accuracy
-        if avg_test_acc > best_test_acc:
-            best_test_acc = avg_test_acc
-            patience_acc = 0
-        else:
-            patience_acc += 1
-            if patience_acc >= rounds_patience_acc:
-                print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy for {rounds_patience_acc} rounds.")
-                break
+        #if avg_test_acc > best_test_acc:
+        #    best_test_acc = avg_test_acc
+        #    patience_acc = 0
+        #else:
+        #    patience_acc += 1
         
         # Early stopping based on loss
-        if avg_test_loss < best_test_loss:
-            best_test_loss = avg_test_loss
-            patience_loss = 0
-        else:
-            patience_loss += 1
-            if patience_loss >= rounds_patience_loss:
-                print(f"Early stopping at round {round_num + 1} due to no improvement in loss for {rounds_patience_loss} rounds.")
-                break
+        #if avg_test_loss < best_test_loss:
+        #    best_test_loss = avg_test_loss
+        #    patience_loss = 0
+        #else:
+        #    patience_loss += 1
         
         # Store best metrics
-        metrics['best_test_loss'] = best_test_loss
-        metrics['best_test_accuracy'] = best_test_acc
-        # Log the best
+        #metrics['best_test_loss'] = best_test_loss
+        #metrics['best_test_accuracy'] = best_test_acc
+        
+        # Log to wandb without specifying step to ensure monotonically increasing steps
+        wandb.log(metrics)
+        
+        #if patience_acc >= rounds_patience_acc:
+        #   print(f"Early stopping at round {round_num + 1} due to no improvement in accuracy for {rounds_patience_acc} rounds.")
+        #   break
+        #elif if patience_loss >= rounds_patience_loss:
+        #   print(f"Early stopping at round {round_num + 1} due to no improvement in loss for {rounds_patience_loss} rounds.")
+        #   break
+        
+        
     return results
