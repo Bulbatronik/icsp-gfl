@@ -9,7 +9,7 @@ echo "=== Starting runs for all dataset and client configuration combinations ==
 
 # Define arrays for different configuration types
 DATASETS=("cifar10_niid") #("cifar10_iid" )
-CLIENT_CONFIGS=("random" "spect_eig3_cos" "heatkern_t40")
+CLIENT_CONFIGS=("nofed" "broadcast" "random" "spect_eig3_cos" "heatkern_t40")
 SEEDS=("42") # "43" "44")
 # Loop through all combinations
 for seed in "${SEEDS[@]}"; do
