@@ -8,9 +8,9 @@ which python3
 echo "=== Starting runs for all dataset and client configuration combinations ==="
 
 # Define arrays for different configuration types
-DATASETS=("fmnist_iid" "fmnist_niid")
-CLIENT_CONFIGS=("random" "spect_eig3_cos") # "heatkernel")
-SEEDS=("42" "43" "44")
+DATASETS=("fmnist_niid") #("fmnist_iid")
+CLIENT_CONFIGS=("random" "spect_eig3_cos" "heatkern_t40")
+SEEDS=("42") # "43" "44")
 # Loop through all combinations
 for seed in "${SEEDS[@]}"; do
     echo ================" Starting runs for seed=$seed ================"
