@@ -434,12 +434,12 @@ class AdaptiveVisualizer:
             sm = cm.ScalarMappable(norm=norm, cmap=self.transition_cmap)
             sm.set_array(edge_weights)
             cbar = plt.colorbar(sm, ax=plt.gca())
-            cbar.set_label('Selection Probability', fontsize=max(8, settings['font_size']))
-            cbar.ax.tick_params(labelsize=max(6, settings['font_size']-2))
+            cbar.set_label('Selection Probability', fontsize=30)#max(8, settings['font_size']))
+            cbar.ax.tick_params(labelsize=15)#max(6, settings['font_size']-2))
         
         # Title with adaptive font size
-        title_fontsize = min(16, max(10, settings['font_size'] + 4))
-        plt.title('Selection Probability Graph', fontsize=title_fontsize)
+        #title_fontsize = 36#min(16, max(10, settings['font_size'] + 4))
+        #plt.title('Selection Probability Graph', fontsize=title_fontsize)
         plt.axis('off')
         plt.tight_layout()
         plt.savefig(f'{self.save_path}/{file_name}.png')
