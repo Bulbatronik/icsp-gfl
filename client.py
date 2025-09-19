@@ -90,7 +90,7 @@ class DecentralizedClient:
             #similarity_matrix = heat_kernel / np.outer(norms, norms)
             
             # OPT3: diff dist D(i, j)^2 = K(i, i) + K(j, j) - 2K(i, j)
-            similarity_matrix = np.sqrt(np.maximum(0, np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel))
+            similarity_matrix = 1/np.maximum(0, np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel)
             #sigma = np.mean(distances) # Gaussian Kernel
             #similarity_matrix = np.exp(-distances**2 / (2 * sigma**2))
             
