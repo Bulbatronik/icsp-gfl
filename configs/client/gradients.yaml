@@ -1,0 +1,6 @@
+selection_method: gradients # Gradient-based neighbor selection using cosine similarity of model updates
+selection_ratio: 0.5 # Ratio of neighbors selected based on gradient similarity
+dist: cosine # Not used for gradients method (gradient similarity is computed via cosine)
+num_eig: 3 # Not used for gradients method
+t: 40 # Not used for gradients method
+tau: 1 # Temperature for softmax over gradient similarities (lower = more selective)

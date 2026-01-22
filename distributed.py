@@ -41,6 +41,11 @@ def run_decentralized_fl(clients, rounds, rounds_patience_acc, rounds_patience_l
             loss = client.train_local()
             train_losses.append(loss)
         
+        # Phase 1.5: Gradient exchange (lightweight, only for gradient-based selection)
+        if clients[0].selection_method == 'gradients':
+            for client_id, client in clients.items():
+                client.share_gradient_with_neighbors(clients)
+        
         # Phase 2: Client selection and model transmission
         transmission_log = {}
         for client_id, client in clients.items():

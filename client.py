@@ -131,6 +131,9 @@ class DecentralizedClient:
                 self.selection_ratio = 0.0 # No communication
             elif selection_method == "random":
                 self.selection_ratio = selection_ratio
+            elif selection_method == "gradients":
+                # Gradient-based selection - similarity computed dynamically
+                self.selection_ratio = selection_ratio
             else:
                 raise ValueError(f"Unknown selection method: {selection_method}")
             
@@ -144,6 +147,11 @@ class DecentralizedClient:
         # Compute probabilities (similarities can be negative)
         # Apply softmax for other methods
         self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
+        
+        # For gradient-based selection
+        self.gradient_vector = None
+        self.params_before_training = None
+        self.received_gradients = {}
         #if selection_method in ["random", "nofed", "broadcast"] or (len(set(self.neighbors_sim)) == 1 and self.neighbors):
         #    # Use uniform distribution for random methods or when all similarities are equal
         #    self.neighbors_proba = np.ones(len(self.neighbors)) / len(self.neighbors) if self.neighbors else np.array([])
@@ -153,6 +161,10 @@ class DecentralizedClient:
         
     def train_local(self):
         """Train locally on client data"""
+        # Store parameters before training for gradient computation
+        if self.selection_method == 'gradients':
+            self.params_before_training = self.get_parameters()
+        
         self.model.train()
         
         epochs_iter = tqdm(range(self.epochs))
@@ -172,6 +184,10 @@ class DecentralizedClient:
             epoch_loss = total_loss / len(self.train_loader)
             # Update tqdm with current loss
             epochs_iter.set_postfix(loss=f"{epoch_loss:.4f}")
+        
+        # Compute gradient vector for gradient-based selection
+        if self.selection_method == 'gradients':
+            self._compute_gradient_vector()
         
         return epoch_loss  # Return only the last epoch's loss
     
@@ -209,12 +225,38 @@ class DecentralizedClient:
     
     def select_neighbors(self):
         """Select subset of neighbors for communication"""
-        #if not self.neighbors:
-        #    return []
+        if not self.neighbors:
+            return []
+        
+        # For gradient-based selection, compute similarities dynamically
+        if self.selection_method == 'gradients':
+            if self.gradient_vector is not None and self.received_gradients:
+                # Compute gradient similarities with neighbors who shared gradients
+                grad_sims = []
+                valid_neighbors = []
+                
+                for nbr in self.neighbors:
+                    if nbr in self.received_gradients:
+                        # Compute cosine similarity between gradient vectors
+                        sim = self._cosine_similarity(self.gradient_vector, self.received_gradients[nbr])
+                        grad_sims.append(sim)
+                        valid_neighbors.append(nbr)
+                
+                if valid_neighbors:
+                    # Use softmax with temperature for selection probabilities
+                    grad_probs = np.exp(np.array(grad_sims) / self.tau)
+                    grad_probs = grad_probs / grad_probs.sum()
+                    
+                    num_select = max(1, ceil(len(valid_neighbors) * self.selection_ratio))
+                    return np.random.choice(valid_neighbors, num_select, replace=False, p=grad_probs)
+            
+            # Fallback to uniform random if no gradient info available
+            num_select = max(1, ceil(len(self.neighbors) * self.selection_ratio))
+            return np.random.choice(self.neighbors, num_select, replace=False)
         
         # Based on the similarity with your neighbors do the selection
-        return np.random.choice(self.neighbors, ceil(len(self.neighbors) * self.selection_ratio), 
-                         replace=False, p=self.neighbors_proba)
+        num_select = max(1, ceil(len(self.neighbors) * self.selection_ratio))
+        return np.random.choice(self.neighbors, num_select, replace=False, p=self.neighbors_proba)
         
     def transmit_to_selected(self, selected_neighbors, all_clients):
         """Transmit model parameters to selected neighbors"""
@@ -234,6 +276,45 @@ class DecentralizedClient:
         if not hasattr(self, 'received_models'):
             self.received_models = {}
         self.received_models[sender_id] = model_params
+    
+    def share_gradient_with_neighbors(self, all_clients):
+        """Share gradient vector with all neighbors (lightweight exchange)"""
+        if self.selection_method == 'gradients' and self.gradient_vector is not None:
+            for neighbor_id in self.neighbors:
+                if neighbor_id in all_clients:
+                    all_clients[neighbor_id].receive_gradient(self.client_id, self.gradient_vector)
+    
+    def receive_gradient(self, sender_id, gradient_vector):
+        """Receive gradient vector from a neighbor"""
+        self.received_gradients[sender_id] = gradient_vector
+    
+    def _compute_gradient_vector(self):
+        """Compute lightweight gradient vector as parameter update direction"""
+        if self.params_before_training is None:
+            return
+        
+        params_after = self.get_parameters()
+        
+        # Compute update: params_after - params_before (gradient direction)
+        grad_list = []
+        for name in params_after.keys():
+            update = params_after[name] - self.params_before_training[name]
+            grad_list.append(update.cpu().flatten())
+        
+        # Flatten to single vector
+        gradient_flat = torch.cat(grad_list).numpy()
+        
+        # Normalize for memory efficiency and to focus on direction
+        norm = np.linalg.norm(gradient_flat)
+        if norm > 1e-10:
+            self.gradient_vector = gradient_flat / norm
+        else:
+            self.gradient_vector = gradient_flat
+    
+    def _cosine_similarity(self, vec1, vec2):
+        """Compute cosine similarity between two vectors (lightweight)"""
+        # Vectors are already normalized in _compute_gradient_vector
+        return np.dot(vec1, vec2)
     
     def aggregate_received_models(self):
         """Aggregate own model with received models from other clients"""

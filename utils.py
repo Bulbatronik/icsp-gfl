@@ -43,6 +43,9 @@ def experiment_name(cfg):
             selection_part += "_"
             selection_part += f"t-{cfg['client']['t']}"
             selection_part += "_"
+        elif cfg['client']['selection_method'] == "gradients":
+            # Gradient-based selection only needs ratio and tau
+            pass
         selection_part += f"ratio-{cfg['client']['selection_ratio']}"
         selection_part += "_"
         selection_part += f"tau-{cfg['client']['tau']}"
