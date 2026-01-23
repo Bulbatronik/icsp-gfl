@@ -58,6 +58,9 @@ class DecentralizedClient:
         self.criterion = nn.CrossEntropyLoss()
         self.rho = rho
         
+        # Store dataset size for weighted averaging
+        self.dataset_size = len(train_loader.dataset)
+        
         # Graph-based neighbors selection if 'selection_method' != random (or broadcast)
         A = nx.adjacency_matrix(self.graph, nodelist=range(graph.number_of_nodes())).toarray()
         #self.similarity_matrix = A
@@ -168,16 +171,29 @@ class DecentralizedClient:
         self.model.train()
         
         epochs_iter = tqdm(range(self.epochs))
+        if self.model.__class__.__name__ == 'ShakespeareLSTM':
+            h = self.model.init_hidden(batch_size=self.train_loader.batch_size)#, device=self.device)
+        
         for _ in epochs_iter:
             total_loss = 0
             for data, target in self.train_loader:
+                if self.model.__class__.__name__ == 'ShakespeareLSTM':
+                    # Detach hidden state to prevent backprop through entire history
+                    h = tuple([each.data for each in h])
+                
                 # Move data to device
                 data, target = data.to(self.device), target.to(self.device)
                 
                 self.optimizer.zero_grad()
-                output = self.model(data)
+                if self.model.__class__.__name__ == 'ShakespeareLSTM':
+                    output, h = self.model(data, h)
+                else:
+                    output = self.model(data)
                 loss = self.criterion(output, target)
                 loss.backward()
+                
+                if self.model.__class__.__name__ == 'ShakespeareLSTM':
+                    nn.utils.clip_grad_norm_(self.model.parameters(), 5)
                 self.optimizer.step()
                 total_loss += loss.item()
             
@@ -269,16 +285,19 @@ class DecentralizedClient:
         for neighbor_id in selected_neighbors:
             if neighbor_id in all_clients:
                 # Store received model in neighbor's received_models
-                all_clients[neighbor_id].receive_model(self.client_id, my_params)
+                all_clients[neighbor_id].receive_model(self.client_id, my_params, self.dataset_size)
                 transmitted_to.append(neighbor_id)
         
         return transmitted_to
     
-    def receive_model(self, sender_id, model_params):
+    def receive_model(self, sender_id, model_params, dataset_size):
         """Receive and store model parameters from another client"""
         if not hasattr(self, 'received_models'):
             self.received_models = {}
+        if not hasattr(self, 'received_dataset_sizes'):
+            self.received_dataset_sizes = {}
         self.received_models[sender_id] = model_params
+        self.received_dataset_sizes[sender_id] = dataset_size
     
     def share_gradient_with_neighbors(self, all_clients):
         """Share gradient vector with all neighbors (lightweight exchange)"""
@@ -327,14 +346,21 @@ class DecentralizedClient:
             print("Keeping current model as the new one.")
             return  # No models received, keep current model
         
-        # Get all received model parameters
+        # Get all received model parameters and their dataset sizes
         received_params_list = list(self.received_models.values())
+        received_sizes = list(self.received_dataset_sizes.values())
         
-        # Average all received parameters
+        # Compute weighted average of received parameters based on dataset sizes
+        total_size = sum(received_sizes)
+        weights = [size / total_size for size in received_sizes]
+        
         avg_received_params = {}
         for name in current_params.keys():
             received_tensors = [rp[name] for rp in received_params_list if name in rp]
             if received_tensors:
+                # Weighted average: sum(weight_i * param_i)
+                #weighted_sum = sum(w * tensor for w, tensor in zip(weights, received_tensors))
+                #avg_received_params[name] = weighted_sum
                 avg_received_params[name] = torch.stack(received_tensors).mean(dim=0)
             else:
                 avg_received_params[name] = current_params[name]
@@ -346,8 +372,9 @@ class DecentralizedClient:
         
         self.set_parameters(aggregated_params)
         
-        # Clear received models for next round
+        # Clear received models and dataset sizes for next round
         self.received_models = {}
+        self.received_dataset_sizes = {}
         
 def constr_prob_matrix(clients):
     """Recover the transition probability matrix"""

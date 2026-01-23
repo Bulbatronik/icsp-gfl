@@ -3,13 +3,15 @@ import torch.nn as nn
 import torch.functional as F
 
 
-def load_model(model_name, device=None):
+def load_model(model_name, vocab_size=None, device=None):
     if model_name == "mnistCNN":
         return MNIST_cnn(device=device)
     elif model_name == "mnistMLP":
         return MNIST_mlp(device=device)
     elif model_name == "cifar10CNN":
         return CIFAR10_cnn(device=device)
+    elif model_name == "shakespeareLSTM":
+        return ShakespeareLSTM(vocab_size=vocab_size, device=device)
     else:
         raise ValueError(f"Model {model_name} not recognized.")
 
@@ -134,3 +136,39 @@ class CIFAR10_cnn(nn.Module):
         x = self.relu3(self.conv3(x))
         x = x.view(x.size(0), -1)
         return self.fc(x)
+
+class ShakespeareLSTM(nn.Module):
+    def __init__(self, vocab_size, device=None):
+        super().__init__()
+        self.embed = nn.Embedding(vocab_size, 8)
+        self.lstm = nn.LSTM(8, 256, 2, batch_first=True)
+        self.fc = nn.Linear(256, vocab_size)
+        self.vocab_size = None
+        # Set device with better error handling
+        try:
+            if device is None:
+                self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            elif isinstance(device, str):
+                self.device = torch.device(device)
+                if self.device.type == 'cuda' and not torch.cuda.is_available():
+                    print("\033[93mWarning: CUDA requested for model but not available. Falling back to CPU.\033[0m")
+                    self.device = torch.device('cpu')
+            else:
+                self.device = device
+            self.to(self.device)
+        except Exception as e:
+            print(f"\033[91mError setting device for model: {e}. Falling back to CPU.\033[0m")
+            self.device = torch.device('cpu')
+            self.to(self.device)
+        
+    def forward(self, x, hidden):
+        x = self.embed(x)
+        out, hidden = self.lstm(x, hidden)
+        out = out.reshape(-1, out.shape[2]) # Flatten for FC
+        out = self.fc(out)
+        return out, hidden
+    
+    def init_hidden(self, batch_size):
+        weight = next(self.parameters()).data
+        return (weight.new(NUM_LAYERS, batch_size, HIDDEN_DIM).zero_(),
+                weight.new(NUM_LAYERS, batch_size, HIDDEN_DIM).zero_())

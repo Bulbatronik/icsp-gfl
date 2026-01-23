@@ -95,6 +95,7 @@ def main(cfg: DictConfig):
             model=deepcopy(model),
             train_loader=loaders["train_loader"], 
             test_loader=loaders["test_loader"],
+            vocab_size=DataDistributor.vocab_size if cfg['dataset']['name']=='shakespeare' else None,
             device=device  # Pass the device to the client
         )
     #print(clients)

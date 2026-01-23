@@ -1,9 +1,14 @@
+import re
+
+import requests
+
+
 import torch
 import numpy as np
-from collections import Counter
+from collections import Counter, defaultdict
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 
 # Data Distribution for Decentralized Federated Learning
@@ -21,7 +26,11 @@ class DataDistributor:
         self.client_loaders = {}
         self.verbose = verbose
         
-    
+        # for shakespeare
+        self.vocab_size = 0      # Store vocab size for model init
+        self.char_to_int = {}    # Store mapping
+        self.int_to_char = {}    # Store reverse mapping
+        
     def load_and_distribute(self):
         # Load the dataset 
         if self.name == 'mnist':
@@ -30,18 +39,105 @@ class DataDistributor:
             train_dataset, test_dataset = self._load_cifar10_data()
         elif self.name == 'fmnist':
             train_dataset, test_dataset = self._load_fashion_mnist_data()
+        elif self.name == 'shakespeare':
+            print('Loading an partitioning shakespeare (NIID only)')
+            self._load_and_distribute_shakespeare(self)
         else:
             raise ValueError(f"Unsupported dataset: {self.name}. Supported: 'mnist', 'cifar10'")
         
-        # Partition the data among the clients
-        if self.partition == 'iid':
-            self._distribute_iid_data(train_dataset, test_dataset)
-        elif self.partition == 'dir':
-            self._distribute_dirichlet_data(train_dataset, test_dataset)
-        else:
-            raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dir'")
+        if self.name in ["mnist", "cifar10", "fmnist"]:
+            # Partition the data among the clients
+            if self.partition == 'iid':
+                self._distribute_iid_data(train_dataset, test_dataset)
+            elif self.partition == 'dir':
+                self._distribute_dirichlet_data(train_dataset, test_dataset)
+            else:
+                raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dir'")    
+    
+    def _load_and_distribute_shakespeare(self):
+        """Downloads, parses, and distributes Shakespeare data by Role"""
+        DATA_URL = "https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt"
         
+        if self.verbose:
+            print(f"Downloading Shakespeare dataset from {DATA_URL}...")
         
+        try:
+            r = requests.get(DATA_URL)
+            text = r.text
+        except Exception:
+            raise ConnectionError("Failed to download Shakespeare dataset")
+
+        # Skip license header
+        start_idx = text.find("1\n  From fairest creatures we desire increase,")
+        if start_idx == -1: start_idx = 0
+        text = text[start_idx:]
+
+        # Parse Roles (Clients)
+        pattern = re.compile(r'\n  ([A-Z]+[A-Z\s]*)\.')
+        raw_roles = defaultdict(str)
+        current_role = None
+        last_pos = 0
+
+        for match in pattern.finditer(text):
+            if current_role:
+                line = text[last_pos:match.start()].replace('\n', ' ').strip()
+                raw_roles[current_role] += " " + line
+            current_role = match.group(1).strip()
+            last_pos = match.end()
+
+        # Select Top N Clients
+        sorted_roles = sorted(raw_roles.items(), key=lambda x: len(x[1]), reverse=True)
+        top_clients = sorted_roles[:self.num_clients]
+
+        # Build Vocabulary
+        subset_text = "".join([c[1] for c in top_clients])
+        chars = sorted(list(set(subset_text)))
+        self.char_to_int = {ch: i for i, ch in enumerate(chars)}
+        self.int_to_char = {i: ch for i, ch in enumerate(chars)}
+        self.vocab_size = len(chars)
+
+        if self.verbose:
+            print(f"Vocab Size: {self.vocab_size}")
+            print(f"Selected {len(top_clients)} clients (Roles)")
+
+        # Distribute to Clients
+        for client_id, (role, content) in enumerate(top_clients):
+            # Encode content
+            encoded = [self.char_to_int[c] for c in content if c in self.char_to_int]
+            encoded = np.array(encoded)
+            
+            # Create Train/Test Split (80/20 as per paper)
+            split_idx = int(len(encoded) * 0.8)
+            train_data = encoded[:split_idx]
+            test_data = encoded[split_idx:]
+            
+            # Create PyTorch Datasets
+            # We wrap in a list because our custom dataset expects a list of arrays (usually for multiple sequences)
+            # Here, each client has one long sequence.
+            client_train_dataset = ShakespeareDataset([train_data], seq_len=self.seq_len)
+            client_test_dataset = ShakespeareDataset([test_data], seq_len=self.seq_len)
+            
+            # Create Loaders
+            train_loader = DataLoader(client_train_dataset, batch_size=self.batch_size, shuffle=True)
+            test_loader = DataLoader(client_test_dataset, batch_size=self.batch_size, shuffle=False)
+            
+            # Store Info
+            self.client_data[client_id] = {
+                'role': role,
+                'train_dataset': client_train_dataset,
+                'test_dataset': client_test_dataset,
+                'train_samples': len(client_train_dataset),
+                'test_samples': len(client_test_dataset)
+            }
+            
+            self.client_loaders[client_id] = {
+                'train_loader': train_loader,
+                'test_loader': test_loader
+            }
+            
+            if self.verbose:
+                print(f"Client {client_id} ({role}): {len(client_train_dataset)} train samples")
+                
     def _load_mnist_data(self, data_dir: str = './data') -> Tuple[Dataset, Dataset]:
         """Load MNIST dataset"""
         # Data preprocessing
@@ -306,3 +402,39 @@ class DataDistributor:
         return self.client_loaders[client_id][f'{loader_type}_loader']
 
     
+    
+# --- Custom Dataset Class for Shakespeare ---
+class ShakespeareDataset(Dataset):
+    """Custom PyTorch Dataset for Shakespeare Text"""
+    def __init__(self, data: List[np.ndarray], seq_len: int = 80):
+        self.data = data  # List of integer arrays (one per client/role)
+        self.seq_len = seq_len
+        self.samples = []
+        
+        # Pre-calculate valid start indices to create samples
+        # Each client's data is treated independently
+        for client_idx, client_data in enumerate(self.data):
+            # We need at least seq_len + 1 (input + target)
+            if len(client_data) <= self.seq_len:
+                continue
+                
+            # Create indices for this client
+            # Sample format: (client_index, start_index)
+            # Stride of 1 for maximum samples, or higher to reduce overlap
+            for i in range(0, len(client_data) - self.seq_len, 1): 
+                self.samples.append((client_idx, i))
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        client_idx, start_idx = self.samples[idx]
+        client_data = self.data[client_idx]
+        
+        # Input: seq_len characters
+        # Target: same sequence shifted by 1 character
+        chunk = client_data[start_idx : start_idx + self.seq_len + 1]
+        
+        x = torch.tensor(chunk[:-1], dtype=torch.long)
+        y = torch.tensor(chunk[1:], dtype=torch.long)
+        return x, y
