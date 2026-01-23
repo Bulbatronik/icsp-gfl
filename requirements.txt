@@ -34,10 +34,16 @@ seaborn==0.13.2
 sentry-sdk==2.37.1
 six==1.17.0
 smmap==5.0.2
+#threadpoolctl==3.6.0
+#torch==1.13.1+cu117
+#torchaudio==0.13.1+cu117
+#torchvision==0.14.1+cu117
+
 threadpoolctl==3.6.0
-torch==1.13.1+cu117
-torchaudio==0.13.1+cu117
-torchvision==0.14.1+cu117
+# PyTorch stack bumped for Python 3.12 compatibility
+torch==2.2.2
+torchaudio==2.2.2
+torchvision==0.17.2
 tqdm==4.67.1
 typing-inspection==0.4.1
 typing_extensions==4.15.0

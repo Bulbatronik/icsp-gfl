@@ -248,14 +248,17 @@ class DecentralizedClient:
                     grad_probs = grad_probs / grad_probs.sum()
                     
                     num_select = max(1, ceil(len(valid_neighbors) * self.selection_ratio))
+                    print(f"Client {self.client_id} selecting neighbours {valid_neighbors} with probs {grad_probs}")
                     return np.random.choice(valid_neighbors, num_select, replace=False, p=grad_probs)
             
             # Fallback to uniform random if no gradient info available
             num_select = max(1, ceil(len(self.neighbors) * self.selection_ratio))
+            print(f"Client {self.client_id} selecting neighbours {valid_neighbors} uniformly")
             return np.random.choice(self.neighbors, num_select, replace=False)
         
         # Based on the similarity with your neighbors do the selection
         num_select = max(1, ceil(len(self.neighbors) * self.selection_ratio))
+        print(f"Client {self.client_id} selecting neighbours {self.neighbors} with probs {self.neighbors_proba}")
         return np.random.choice(self.neighbors, num_select, replace=False, p=self.neighbors_proba)
         
     def transmit_to_selected(self, selected_neighbors, all_clients):
