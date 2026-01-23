@@ -269,7 +269,7 @@ class DecentralizedClient:
             
             # Fallback to uniform random if no gradient info available
             num_select = max(1, ceil(len(self.neighbors) * self.selection_ratio))
-            print(f"Client {self.client_id} selecting neighbours {valid_neighbors} uniformly")
+            print(f"Client {self.client_id} selecting neighbours {self.neighbors} uniformly")
             return np.random.choice(self.neighbors, num_select, replace=False)
         
         # Based on the similarity with your neighbors do the selection
