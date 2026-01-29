@@ -32,13 +32,15 @@ class NetworkTopology:
         elif self.topology == "star":
             self.G = self._create_star_topology()
         elif self.topology == "random":
-            self.G = self._create_random_topology()
+            self.G = self._create_random_topology() # main 1
         elif self.topology == "smallwrld":
             self.G = self._create_small_world_topology()
         elif self.topology == "grid":
             self.G = self._create_grid_topology()
         elif self.topology == "women":
-            self.G = self._women_social_network()
+            self.G = self._women_social_network() # main 2
+        elif self.topology == "miserable":
+            self.G = self._miserable_graph() # main 3 (74 nodes)
         elif self.topology == "karate":
             self.G = self._karate_graph()
         elif self.topology == "floorent":
@@ -129,6 +131,14 @@ class NetworkTopology:
     def _women_social_network(self) -> nx.Graph:
         """Davis Southern women social network"""
         G = nx.davis_southern_women_graph()
+        G = self._relabel_nodes(G)
+        self.num_clients = G.number_of_nodes()
+        self.clients = list(range(self.num_clients))
+        return G
+    
+    def _miserable_graph(self) -> nx.Graph:
+        """Les miserable s graph that returns co appearance network of characters in the novel Les Miserable s."""
+        G = nx.les_miserables_graph()
         G = self._relabel_nodes(G)
         self.num_clients = G.number_of_nodes()
         self.clients = list(range(self.num_clients))
