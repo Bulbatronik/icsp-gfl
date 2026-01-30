@@ -86,14 +86,19 @@ class DecentralizedClient:
             heat_kernel = eigvecs @ np.diag(np.exp(-self.t * eigvals)) @ eigvecs.T
 
             # OPT1: Convert kernel to similarity matrix
-            #similarity_matrix = heat_kernel
+            similarity_matrix = heat_kernel
 
             # OPT2: cossim(i, j) = K(i, j) / sqrt(K(i, i) * K(j, j))
             #norms = np.sqrt(np.diag(heat_kernel))
             #similarity_matrix = heat_kernel / np.outer(norms, norms)
             
             # OPT3: diff dist D(i, j)^2 = K(i, i) + K(j, j) - 2K(i, j)
-            similarity_matrix = 1/np.maximum(0, np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel)
+            # Add epsilon to prevent division by zero and clip to prevent extreme values
+            # eps = 1e-10
+            # distances_sq = np.diag(heat_kernel)[:, None] + np.diag(heat_kernel)[None, :] - 2 * heat_kernel
+            # distances_sq = np.maximum(eps, distances_sq)  # Prevent division by zero
+            # similarity_matrix = 1 / distances_sq
+            # similarity_matrix = np.clip(similarity_matrix, 0, 1e6)  # Clip extreme values
             #sigma = np.mean(distances) # Gaussian Kernel
             #similarity_matrix = np.exp(-distances**2 / (2 * sigma**2))
             
@@ -148,8 +153,15 @@ class DecentralizedClient:
         self.neighbors_sim = [similarity_matrix[client_id, nbr] for nbr in self.neighbors]
         
         # Compute probabilities (similarities can be negative)
-        # Apply softmax for other methods
-        self.neighbors_proba = np.exp(np.array(self.neighbors_sim) / self.tau) / np.sum(np.exp(np.array(self.neighbors_sim) / self.tau))
+        # Apply softmax with numerical stability (log-sum-exp trick)
+        if len(self.neighbors_sim) > 0:
+            sim_array = np.array(self.neighbors_sim) / self.tau
+            # Subtract max for numerical stability
+            sim_array_stable = sim_array - np.max(sim_array)
+            exp_sim = np.exp(sim_array_stable)
+            self.neighbors_proba = exp_sim / np.sum(exp_sim)
+        else:
+            self.neighbors_proba = np.array([])
         
         # For gradient-based selection
         self.gradient_vector = None
