@@ -16,12 +16,15 @@ class DataDistributor:
     """Class to handle data distribution among federated learning clients"""
     
     def __init__(self, num_clients: int, name: str = 'mnist', partition: str = 'iid',
-                 batch_size: int = 32, alpha: float = 0.5, verbose: bool = True):
+                 batch_size: int = 32, alpha: float = 0.5, sigma: float = 1.0,
+                 graph=None, verbose: bool = True):
         self.num_clients = num_clients
         self.name = name.lower()
         self.partition = partition.lower()
         self.batch_size = batch_size
         self.alpha = alpha  # Dirichlet concentration parameter
+        self.sigma = sigma  # Spread of class preference along the graph (topo partition)
+        self.graph = graph  # networkx graph, required for the 'topo' partition
         self.client_data = {}
         self.client_loaders = {}
         self.verbose = verbose
@@ -51,8 +54,12 @@ class DataDistributor:
                 self._distribute_iid_data(train_dataset, test_dataset)
             elif self.partition == 'dir':
                 self._distribute_dirichlet_data(train_dataset, test_dataset)
+            elif self.partition == 'topo':
+                self._distribute_topo_data(train_dataset, test_dataset)
+            elif self.partition == 'block':
+                self._distribute_block_data(train_dataset, test_dataset)
             else:
-                raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dir'")    
+                raise ValueError(f"Unsupported partitioning method: {self.partition}. Supported: 'iid', 'dir', 'topo', 'block'")
     
     def _load_and_distribute_shakespeare(self):
         """Downloads, parses, and distributes Shakespeare data by Role"""
@@ -372,6 +379,162 @@ class DataDistributor:
             }
 
         #return self.client_data
+
+    def _distribute_topo_data(self, train_dataset: Dataset, test_dataset: Dataset) -> Dict[int, Dict]:
+        """Topology-correlated non-IID partition.
+
+        Each client's label distribution is tied to its position along the
+        graph's Fiedler coordinate (second Laplacian eigenvector). Clients that
+        are structurally close (spectrally similar) therefore hold similar label
+        distributions, so data heterogeneity is correlated with the communication
+        topology. The spread ``sigma`` controls heterogeneity: smaller values
+        concentrate each class on a few neighboring nodes (stronger non-IID).
+        """
+        import networkx as nx
+        from scipy.linalg import eigh
+        from scipy.sparse import csgraph
+
+        if self.graph is None:
+            raise ValueError("partition='topo' requires a graph to be passed to DataDistributor.")
+
+        num_classes = 10
+        # Fiedler coordinate per node from the normalized Laplacian
+        A = nx.adjacency_matrix(self.graph, nodelist=range(self.num_clients)).toarray()
+        L = csgraph.laplacian(A, normed=True)
+        _, eigvecs = eigh(L)
+        fiedler = eigvecs[:, 1]
+        # Rank-normalize coordinates to [0, num_classes-1] -> class preference center
+        order = np.argsort(np.argsort(fiedler))
+        centers = order / max(1, self.num_clients - 1) * (num_classes - 1)
+
+        # Gaussian preference of each client over classes along the coordinate
+        classes = np.arange(num_classes)
+        W = np.exp(-((centers[:, None] - classes[None, :]) ** 2) / (2.0 * self.sigma ** 2))
+
+        train_labels = np.array(train_dataset.targets)
+        train_indices_by_class = {c: np.where(train_labels == c)[0] for c in range(num_classes)}
+
+        for client_id in range(self.num_clients):
+            self.client_data[client_id] = {'train_indices': [], 'test_indices': []}
+
+        # Allocate each class to clients proportionally to their preference weight
+        for c in range(num_classes):
+            idxs = train_indices_by_class[c]
+            np.random.shuffle(idxs)
+            proportions = W[:, c] / W[:, c].sum()
+            split_points = (np.cumsum(proportions) * len(idxs)).astype(int)[:-1]
+            for client_id, client_split in enumerate(np.split(idxs, split_points)):
+                self.client_data[client_id]['train_indices'].extend(client_split.tolist())
+
+        # Uniform (IID) test set, as in the Dirichlet partition
+        test_indices = torch.randperm(len(test_dataset)).tolist()
+        test_samples_per_client = len(test_dataset) // self.num_clients
+        for client_id in range(self.num_clients):
+            start = client_id * test_samples_per_client
+            end = (client_id + 1) * test_samples_per_client if client_id != self.num_clients - 1 else len(test_dataset)
+            self.client_data[client_id]['test_indices'] = test_indices[start:end]
+
+        test_labels = np.array(test_dataset.targets)
+        for client_id in range(self.num_clients):
+            client_train_dataset = torch.utils.data.Subset(train_dataset, self.client_data[client_id]['train_indices'])
+            client_test_dataset = torch.utils.data.Subset(test_dataset, self.client_data[client_id]['test_indices'])
+
+            if self.verbose:
+                train_lbls = [int(train_labels[i]) for i in self.client_data[client_id]['train_indices']]
+                print(f"Client {client_id} - Train labels: {Counter(train_lbls)}")
+
+            train_loader = DataLoader(client_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False)
+            test_loader = DataLoader(client_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
+
+            self.client_data[client_id].update({
+                'train_dataset': client_train_dataset,
+                'test_dataset': client_test_dataset,
+                'train_samples': len(client_train_dataset),
+                'test_samples': len(client_test_dataset)
+            })
+            self.client_loaders[client_id] = {'train_loader': train_loader, 'test_loader': test_loader}
+
+    def _distribute_block_data(self, train_dataset: Dataset, test_dataset: Dataset) -> Dict[int, Dict]:
+        """Community-correlated (block) non-IID partition.
+
+        Graph communities (greedy modularity) are each assigned a disjoint block
+        of classes, so clients in the same community hold similar data while
+        clients in different communities do not. Because the graph also has
+        inter-community edges, a client's neighborhood mixes same- and
+        different-distribution peers; selecting the structurally similar
+        (same-community) neighbors is therefore beneficial, which is the regime
+        topology-aware selection is designed to exploit. A small ``leak``
+        fraction of every class is spread across all clients for realism.
+        """
+        import networkx as nx
+        from networkx.algorithms.community import greedy_modularity_communities
+
+        if self.graph is None:
+            raise ValueError("partition='block' requires a graph to be passed to DataDistributor.")
+
+        num_classes = 10
+        leak = 0.1  # fraction of each class spread uniformly across all clients
+
+        communities = list(greedy_modularity_communities(self.graph))
+        comm_of_node = {n: ci for ci, com in enumerate(communities) for n in com}
+        num_comm = len(communities)
+        # Map each class to an owning community (contiguous blocks)
+        class_owner = {c: min(num_comm - 1, c * num_comm // num_classes) for c in range(num_classes)}
+
+        train_labels = np.array(train_dataset.targets)
+        train_indices_by_class = {c: np.where(train_labels == c)[0] for c in range(num_classes)}
+        for client_id in range(self.num_clients):
+            self.client_data[client_id] = {'train_indices': [], 'test_indices': []}
+
+        for c in range(num_classes):
+            idxs = train_indices_by_class[c]
+            np.random.shuffle(idxs)
+            n_leak = int(leak * len(idxs))
+            leak_part, main_part = idxs[:n_leak], idxs[n_leak:]
+
+            owner_nodes = [n for n in range(self.num_clients) if comm_of_node.get(n, -1) == class_owner[c]]
+            if not owner_nodes:
+                owner_nodes = list(range(self.num_clients))
+            # Bulk of the class -> owning community, split via Dirichlet
+            props = np.random.dirichlet([self.alpha] * len(owner_nodes))
+            for node, part in zip(owner_nodes, np.split(main_part, (np.cumsum(props) * len(main_part)).astype(int)[:-1])):
+                self.client_data[node]['train_indices'].extend(part.tolist())
+            # Leak -> all clients
+            props2 = np.random.dirichlet([self.alpha] * self.num_clients)
+            for node, part in zip(range(self.num_clients), np.split(leak_part, (np.cumsum(props2) * len(leak_part)).astype(int)[:-1])):
+                self.client_data[node]['train_indices'].extend(part.tolist())
+
+        # Personalized test set: each client is tested on its OWN (community)
+        # label distribution, so the metric rewards specializing to the local
+        # task rather than global coverage. This is the natural evaluation for
+        # community-structured collaboration.
+        test_labels = np.array(test_dataset.targets)
+        test_by_class = {c: np.where(test_labels == c)[0] for c in range(num_classes)}
+        per = len(test_dataset) // self.num_clients
+        for client_id in range(self.num_clients):
+            tr = [int(train_labels[i]) for i in self.client_data[client_id]['train_indices']]
+            counts = Counter(tr)
+            tot = sum(counts.values()) or 1
+            picks = []
+            for c in range(num_classes):
+                k = int(round(per * counts.get(c, 0) / tot))
+                if k > 0:
+                    picks.extend(np.random.choice(test_by_class[c], size=k, replace=True).tolist())
+            self.client_data[client_id]['test_indices'] = picks
+
+        train_labels = np.array(train_dataset.targets)
+        for client_id in range(self.num_clients):
+            client_train_dataset = torch.utils.data.Subset(train_dataset, self.client_data[client_id]['train_indices'])
+            client_test_dataset = torch.utils.data.Subset(test_dataset, self.client_data[client_id]['test_indices'])
+            if self.verbose:
+                lbls = [int(train_labels[i]) for i in self.client_data[client_id]['train_indices']]
+                print(f"Client {client_id} (comm {comm_of_node.get(client_id)}) - {Counter(lbls)}")
+            train_loader = DataLoader(client_train_dataset, batch_size=self.batch_size, shuffle=True, drop_last=False)
+            test_loader = DataLoader(client_test_dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
+            self.client_data[client_id].update({
+                'train_dataset': client_train_dataset, 'test_dataset': client_test_dataset,
+                'train_samples': len(client_train_dataset), 'test_samples': len(client_test_dataset)})
+            self.client_loaders[client_id] = {'train_loader': train_loader, 'test_loader': test_loader}
 
     def get_data_summary(self) -> Dict:
         """Get summary of data distribution"""

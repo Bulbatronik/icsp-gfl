@@ -1,0 +1,4 @@
+name: fmnist  # Options: mnist, cifar10, fmnist
+partition: block  # Community-correlated non-IID partition (personalized test)
+batch_size: 64
+alpha: 0.3 # Dirichlet concentration within a community block

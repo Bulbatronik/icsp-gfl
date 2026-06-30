@@ -1,0 +1,6 @@
+selection_method: kld # Data-aware selection: prefer neighbors with similar label distribution (low symmetric KLD)
+selection_ratio: 0.5
+dist: cosine
+num_eig: 3
+t: 1
+tau: 1

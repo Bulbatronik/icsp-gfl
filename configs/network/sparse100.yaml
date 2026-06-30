@@ -1,0 +1,5 @@
+num_clients: 100
+topology: smallwrld # Watts-Strogatz small-world (sparse, with bottlenecks)
+edge_proba: 0.4
+k: 4   # each node connected to ~4 neighbors (sparse)
+p: 0.2 # rewiring probability

@@ -1,0 +1,5 @@
+name: fmnist  # Options: mnist, cifar10, fmnist
+partition: topo  # Topology-correlated non-IID partition
+batch_size: 64
+alpha: 0.3 # Unused for topo, kept for compatibility
+sigma: 1.0 # Spread of class preference along the graph Fiedler coordinate (smaller = more non-IID)

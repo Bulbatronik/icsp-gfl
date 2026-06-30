@@ -9,3 +9,6 @@ __pycache__/
 
 *.log
 paper/
+*results*/
+*logs*/
+.claude/

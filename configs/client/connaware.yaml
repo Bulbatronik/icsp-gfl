@@ -1,0 +1,6 @@
+selection_method: connaware # Connectivity-aware (effective-resistance / bridge) selection
+selection_ratio: 0.5
+dist: cosine
+num_eig: 3
+t: 40
+tau: 1

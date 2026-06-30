@@ -57,8 +57,9 @@ def main(cfg: DictConfig):
     num_clients = network.num_clients
     cfg['network']['num_clients'] = num_clients
     
-    # Experiment name where the figures will be saved
-    exp_name = f"results/{experiment_name(cfg)}"
+    # Experiment name where the figures will be saved (RESULTS_DIR lets a run
+    # campaign write to an isolated folder without clobbering existing results)
+    exp_name = f"{os.environ.get('RESULTS_DIR', 'results')}/{experiment_name(cfg)}"
     os.makedirs(exp_name, exist_ok=True)
     
     info = network.get_topology_info()
@@ -72,7 +73,7 @@ def main(cfg: DictConfig):
     initial_visuals["original_topology"] = wandb.Image(f"{exp_name}/plots/original_topology.png")
     
     # Prepare the dataset
-    data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients, verbose=False)
+    data_distributor = DataDistributor(**cfg['dataset'], num_clients=num_clients, graph=network.G, verbose=False)
     data_distributor.load_and_distribute()
     summary = data_distributor.get_data_summary()
     print("Data distribution summary:\n", OmegaConf.to_yaml(summary))
@@ -81,20 +82,33 @@ def main(cfg: DictConfig):
     # Add the data distribution figure to the collection
     initial_visuals["data_distribution"] = wandb.Image(f"{exp_name}/plots/data_distribution.png")
     
+    # Per-client label distribution (used by the data-aware 'kld' selector)
+    import numpy as np
+    num_classes = 10
+    label_dist = np.zeros((num_clients, num_classes), dtype=float)
+    for cid in range(num_clients):
+        ds = data_distributor.client_data[cid].get('train_dataset')
+        try:
+            targets = np.asarray(ds.dataset.targets)[np.asarray(ds.indices)]
+        except Exception:
+            targets = np.array([int(y) for _, y in ds])
+        label_dist[cid] = np.bincount(targets.astype(int), minlength=num_classes)
+
     # Create clients
     model = load_model(cfg['training']['architecture'], device=device)
-    
+
     clients = {}
     for client_id in range(num_clients):
         loaders = data_distributor.client_loaders[client_id]
         clients[client_id] = DecentralizedClient(
             **cfg['client'],
             **cfg['training'],
-            client_id=client_id, 
+            client_id=client_id,
             graph=network.G,
             model=deepcopy(model),
-            train_loader=loaders["train_loader"], 
+            train_loader=loaders["train_loader"],
             test_loader=loaders["test_loader"],
+            label_dist=label_dist,
             vocab_size=DataDistributor.vocab_size if cfg['dataset']['name']=='shakespeare' else None,
             device=device  # Pass the device to the client
         )

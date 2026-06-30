@@ -1,0 +1,4 @@
+name: fmnist  # Options: mnist, cifar10, fmnist
+partition: dir  # Dirichlet non-IID
+batch_size: 64
+alpha: 0.1 # Stronger heterogeneity (standard non-IID setting)

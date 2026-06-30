@@ -53,7 +53,7 @@ def experiment_name(cfg):
     dataset_part = f"D-{cfg['dataset']['name']}"
     dataset_part += "_"
     dataset_part += f"split-{cfg['dataset']['partition']}"
-    if cfg['dataset']['partition'] == 'dirichlet':
+    if cfg['dataset']['partition'] in ('dirichlet', 'dir'):
         dataset_part += "_"
         dataset_part += f"a-{cfg['dataset']['alpha']}"
         

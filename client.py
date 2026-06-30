@@ -27,6 +27,7 @@ class DecentralizedClient:
         self.dist = dist
         self.t = t # Diffusion time, small = local, large = global
         self.tau = tau # Temperature for the client selection
+        self.label_dist = kwargs.get('label_dist', None) # per-client label histograms (for data-aware selection)
         
         # Set device with better error handling
         if device is None:
@@ -127,6 +128,28 @@ class DecentralizedClient:
                 similarity_matrix = np.exp(-distances**2 / (2 * sigma**2))
             else:
                 raise ValueError(f"Unknown distance metric: {dist}")                     
+        elif selection_method == 'connaware':
+            # Connectivity-aware selection: prefer bridge edges via effective
+            # resistance R_ij = (e_i-e_j)^T L^+ (e_i-e_j). High-resistance
+            # neighbors are connectivity-critical; selecting them improves the
+            # mixing (spectral gap), unlike similarity-based selection.
+            L = csgraph.laplacian(A, normed=False)
+            Lp = np.linalg.pinv(L)
+            d = np.diag(Lp)
+            similarity_matrix = d[:, None] + d[None, :] - 2 * Lp
+
+        elif selection_method == 'kld':
+            # Data-aware selection: prefer neighbors with a similar label
+            # distribution, scored by the (negative) symmetric KL divergence.
+            # Low divergence -> high similarity -> higher selection probability.
+            P = np.asarray(self.label_dist, dtype=float)
+            eps = 1e-6
+            Pn = (P + eps) / (P + eps).sum(axis=1, keepdims=True)
+            logPn = np.log(Pn)
+            # KL(i||j) = sum_c Pn[i,c] (log Pn[i,c] - log Pn[j,c])
+            KL = (Pn[:, None, :] * (logPn[:, None, :] - logPn[None, :, :])).sum(axis=2)
+            similarity_matrix = -0.5 * (KL + KL.T)
+
         else:
             similarity_matrix = deepcopy(A) # Default to adjacency if unknown method
             if self.client_id == 0:
