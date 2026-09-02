@@ -352,8 +352,9 @@ class AdaptiveVisualizer:
         plt.tight_layout()
         plt.savefig(f'{self.save_path}/{file_name}.png')
         
-    def plot_transition_graph(self, P: np.ndarray, pos: Optional[Dict] = None, 
-                             file_name: str = 'selection_graph') -> None:
+    def plot_transition_graph(self, P: np.ndarray, pos: Optional[Dict] = None,
+                             file_name: str = 'selection_graph',
+                             edge_width: Optional[float] = None) -> None:
         """
         Creates and plots a directed graph from a transition probability matrix with adaptive settings.
         
@@ -414,10 +415,10 @@ class AdaptiveVisualizer:
         # Adaptive arrow size
         arrow_size = max(10, min(20, settings['node_size'] / 50))
         
-        # Draw edges with adaptive settings
+        # Draw edges with adaptive settings (edge_width overrides the adaptive default when given)
         nx.draw_networkx_edges(G, pos,
                             edge_color=edge_colors,
-                            width=settings['edge_width'],
+                            width=settings['edge_width'] if edge_width is None else edge_width,
                             alpha=settings['edge_alpha'],
                             arrows=True,
                             arrowstyle='->',
@@ -482,8 +483,9 @@ def plot_selection_probability(P: np.ndarray, save_folder: str = './',
     visualizer = AdaptiveVisualizer(save_folder)
     visualizer.plot_selection_probability(P, file_name)
 
-def plot_transition_graph(P: np.ndarray, pos: Dict, save_folder: str = './', 
-                        file_name: str = 'selection_graph') -> None:
+def plot_transition_graph(P: np.ndarray, pos: Dict, save_folder: str = './',
+                        file_name: str = 'selection_graph',
+                        edge_width: Optional[float] = None) -> None:
     """Plot transition graph using adaptive settings"""
     visualizer = AdaptiveVisualizer(save_folder)
-    visualizer.plot_transition_graph(P, pos, file_name)
+    visualizer.plot_transition_graph(P, pos, file_name, edge_width=edge_width)

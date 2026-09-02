@@ -28,7 +28,7 @@ def finals(must, nots=(), last=10):
     return [sum(c[-last:]) / len(c[-last:]) for c in curves(must, nots)]
 
 plt.rcParams.update({"font.size": 8, "axes.grid": True, "grid.alpha": 0.3,
-                     "lines.linewidth": 1.3, "lines.markersize": 4, "legend.fontsize": 6})
+                     "lines.linewidth": 1.3, "lines.markersize": 4, "legend.fontsize": 7})
 fig, ax = plt.subplots(1, 3, figsize=(7.4, 1.95))
 
 # ---- (a) convergence, miserable (N=77), strong heterogeneity (Dirichlet alpha=0.1) ----
@@ -49,7 +49,7 @@ for name, (must, col, ls) in conv.items():
             s = arr.std(axis=0)
             ax[0].fill_between(x, m - s, m + s, color=col, alpha=0.18, linewidth=0)
 ax[0].set_xlabel("Communication round"); ax[0].set_ylabel("Test accuracy (%)")
-ax[0].set_title(r"(a) large graph, $\alpha{=}0.1$"); ax[0].legend(loc="lower right")
+ax[0].set_title(r"(a) large graph, $\alpha{=}0.1$"); ax[0].legend(loc="upper left")
 
 # ---- (b) accuracy vs beta (small, Dirichlet alpha=0.3), mean +/- std ----
 betas = [0.25, 0.5, 0.75]
